@@ -35,74 +35,73 @@ const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&red
 authLink.href = authUrl;
 
 // --- 認証後の処理 (ページ読み込み時) ---
-window.onload = function () {
-    // --- Dark Mode Logic ---
-    function setDarkMode(isDark) {
-        if (isDark) {
-            document.body.classList.add('dark-mode');
-            themeToggle.checked = true;
-            themeLabel.textContent = 'ダークモード';
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.body.classList.remove('dark-mode');
-            themeToggle.checked = false;
-            themeLabel.textContent = 'ライトモード';
-            localStorage.setItem('theme', 'light');
-        }
-    }
-
-    // Check for saved theme in localStorage
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        setDarkMode(true);
+// --- Dark Mode Logic ---
+function setDarkMode(isDark) {
+    if (isDark) {
+        document.body.classList.add('dark-mode');
+        if (themeToggle) themeToggle.checked = true;
+        if (themeLabel) themeLabel.textContent = 'ダークモード';
+        localStorage.setItem('theme', 'dark');
     } else {
-        setDarkMode(false); // Default to light
+        document.body.classList.remove('dark-mode');
+        if (themeToggle) themeToggle.checked = false;
+        if (themeLabel) themeLabel.textContent = 'ライトモード';
+        localStorage.setItem('theme', 'light');
     }
+}
 
-    // Add listener for toggle
-    themeToggle.addEventListener('change', () => {
-        setDarkMode(themeToggle.checked);
-    });
+// Check for saved theme in localStorage immediately to prevent flash
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'dark') {
+    setDarkMode(true);
+} else {
+    // Default to light, but check system preference could be added here
+    setDarkMode(false);
+}
+
+// Add listener for toggle
+themeToggle.addEventListener('change', () => {
+    setDarkMode(themeToggle.checked);
+});
 
 
-    // --- Auth Logic ---
-    if (location.hash) {
-        const fragmentParams = new URLSearchParams(location.hash.substring(1));
-        const accessToken = fragmentParams.get('access_token');
+// --- Auth Logic ---
+if (location.hash) {
+    const fragmentParams = new URLSearchParams(location.hash.substring(1));
+    const accessToken = fragmentParams.get('access_token');
 
-        if (accessToken) {
-            currentAccessToken = accessToken;
-            console.log("Access Token:", currentAccessToken);
-            authStatus.textContent = '認証成功！ゲーム名とフィルター条件を入力して配信を検索できます。';
-            authStatus.style.color = 'green';
-            authSection.style.display = 'none';
-            searchSection.style.display = 'block';
+    if (accessToken) {
+        currentAccessToken = accessToken;
+        console.log("Access Token:", currentAccessToken);
+        authStatus.textContent = '認証成功！ゲーム名とフィルター条件を入力して配信を検索できます。';
+        authStatus.style.color = 'green';
+        authSection.style.display = 'none';
+        searchSection.style.display = 'block';
 
-            history.replaceState(null, document.title, window.location.pathname + window.location.search);
-        } else {
-            const error = fragmentParams.get('error_description');
-            authStatus.textContent = `認証に失敗しました: ${error || 'アクセストークンを取得できませんでした。'}`;
-            authStatus.style.color = 'red';
-        }
+        history.replaceState(null, document.title, window.location.pathname + window.location.search);
+    } else {
+        const error = fragmentParams.get('error_description');
+        authStatus.textContent = `認証に失敗しました: ${error || 'アクセストークンを取得できませんでした。'}`;
+        authStatus.style.color = 'red';
     }
+}
 
-    // --- Segmented Control Logic ---
-    const tagLogicControl = document.getElementById('tagLogicControl');
-    tagLogicControl.addEventListener('click', (e) => {
-        if (e.target.matches('.segmented-control-button')) {
-            // Remove active class from all buttons in this control
-            tagLogicControl.querySelectorAll('.segmented-control-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            // Add active class to the clicked button
-            e.target.classList.add('active');
-        }
-    });
+// --- Segmented Control Logic ---
+const tagLogicControl = document.getElementById('tagLogicControl');
+tagLogicControl.addEventListener('click', (e) => {
+    if (e.target.matches('.segmented-control-button')) {
+        // Remove active class from all buttons in this control
+        tagLogicControl.querySelectorAll('.segmented-control-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Add active class to the clicked button
+        e.target.classList.add('active');
+    }
+});
 
-    // --- Load saved settings ---
-    loadSettings();
-    loadVisitedStreams();
-};
+// --- Load saved settings ---
+loadSettings();
+loadVisitedStreams();
 
 // --- Visited Streams Management ---
 function loadVisitedStreams() {
