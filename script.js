@@ -1,6 +1,6 @@
 // --- 設定値 ---
 const clientId = 'v4sb97ncaw1rbh8mizfg3ld7j5rkw2';
-const redirectUri = 'https://doggyid.github.io/twitch-sankagata-search/';
+const redirectUri = (window.location.origin + window.location.pathname).replace(/\/index\.html$/, '/').replace(/\/?$/, '/');
 const scope = 'user:read:email';
 
 let currentAccessToken = null;
