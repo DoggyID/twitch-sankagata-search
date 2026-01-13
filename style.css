@@ -25,7 +25,7 @@
     --segment-active-color: #fff;
 }
 
-body.dark-mode {
+html.dark-mode {
     --bg-color: #18181b;
     /* Twitch Dark BG */
     --text-color: #e0e0e0;
@@ -62,6 +62,7 @@ body.dark-mode {
     box-sizing: border-box;
 }
 
+html,
 body {
     font-family: sans-serif;
     margin: 20px;
@@ -214,7 +215,7 @@ button:hover {
     /* リンクの色も調整 */
 }
 
-body.dark-mode .stream-info h3 a {
+html.dark-mode .stream-info h3 a {
     color: var(--twitch-purple);
     /* ダークモードではリンク色を紫に */
 }
@@ -508,7 +509,7 @@ input:checked+.slider:before {
     font-weight: bold;
 }
 
-body.dark-mode .theme-switch-label {
+html.dark-mode .theme-switch-label {
     color: var(--twitch-purple);
 }
 
@@ -624,7 +625,7 @@ details.visited-accordion summary:hover {
     vertical-align: middle;
 }
 
-body.dark-mode .visited-badge {
+html.dark-mode .visited-badge {
     background-color: #46464a;
     color: #ccc;
 }

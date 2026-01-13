@@ -34,16 +34,50 @@ const themeLabel = document.getElementById('theme-label-text');
 const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
 authLink.href = authUrl;
 
-// --- 認証後の処理 (ページ読み込み時) ---
+// ポップアップ認証のイベントリスナー
+authLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    // 画面中央にポップアップを表示
+    const width = 500;
+    const height = 700;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+    window.open(authUrl, 'twitch_auth', `width=${width},height=${height},top=${top},left=${left}`);
+});
+
+// メッセージ受信 (ポップアップからの認証結果待ち受け)
+window.addEventListener('message', (event) => {
+    // セキュリティチェック: 同一オリジンからのメッセージのみ受け付ける
+    if (event.origin !== window.location.origin) return;
+
+    if (event.data?.type === 'TWITCH_AUTH_SUCCESS') {
+        handleAuthSuccess(event.data.token);
+    }
+});
+
+function handleAuthSuccess(accessToken) {
+    currentAccessToken = accessToken;
+    console.log("Access Token:", currentAccessToken);
+    authStatus.textContent = '認証成功！ゲーム名とフィルター条件を入力して配信を検索できます。';
+    authStatus.style.color = 'green';
+    authSection.style.display = 'none';
+    searchSection.style.display = 'block';
+
+    // 認証成功時、URLハッシュをクリアする (メインウィンドウの場合)
+    if (!window.opener) {
+        history.replaceState(null, document.title, window.location.pathname + window.location.search);
+    }
+}
+
 // --- Dark Mode Logic ---
 function setDarkMode(isDark) {
     if (isDark) {
-        document.body.classList.add('dark-mode');
+        document.documentElement.classList.add('dark-mode');
         if (themeToggle) themeToggle.checked = true;
         if (themeLabel) themeLabel.textContent = 'ダークモード';
         localStorage.setItem('theme', 'dark');
     } else {
-        document.body.classList.remove('dark-mode');
+        document.documentElement.classList.remove('dark-mode');
         if (themeToggle) themeToggle.checked = false;
         if (themeLabel) themeLabel.textContent = 'ライトモード';
         localStorage.setItem('theme', 'light');
@@ -71,18 +105,27 @@ if (location.hash) {
     const accessToken = fragmentParams.get('access_token');
 
     if (accessToken) {
-        currentAccessToken = accessToken;
-        console.log("Access Token:", currentAccessToken);
-        authStatus.textContent = '認証成功！ゲーム名とフィルター条件を入力して配信を検索できます。';
-        authStatus.style.color = 'green';
-        authSection.style.display = 'none';
-        searchSection.style.display = 'block';
-
-        history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        // ポップアップウィンドウの場合: 親ウィンドウにトークンを送信して閉じる
+        if (window.opener) {
+            window.opener.postMessage({
+                type: 'TWITCH_AUTH_SUCCESS',
+                token: accessToken
+            }, window.location.origin);
+            window.close();
+        } else {
+            // 通常のページ遷移の場合
+            handleAuthSuccess(accessToken);
+        }
     } else {
         const error = fragmentParams.get('error_description');
-        authStatus.textContent = `認証に失敗しました: ${error || 'アクセストークンを取得できませんでした。'}`;
-        authStatus.style.color = 'red';
+        // ポップアップの場合は閉じるかエラー表示
+        if (window.opener) {
+            // エラー時は閉じずに表示しておくか、閉じるか。ユーザーが見えるように閉ざないでおく。
+            document.body.innerHTML = `<p style="color:red; padding: 20px;">認証エラー: ${error}</p>`;
+        } else {
+            authStatus.textContent = `認証に失敗しました: ${error || 'アクセストークンを取得できませんでした。'}`;
+            authStatus.style.color = 'red';
+        }
     }
 }
 
