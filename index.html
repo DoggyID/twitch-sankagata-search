@@ -15,7 +15,7 @@
             <div class="theme-switch-wrapper">
                 <span class="theme-switch-label" id="theme-label-text">ライトモード</span>
                 <label class="theme-switch" for="theme-toggle">
-                    <input type="checkbox" id="theme-toggle">
+                    <input type="checkbox" id="theme-toggle" aria-label="ダークモードの切り替え">
                     <span class="slider round"></span>
                 </label>
             </div>
@@ -115,8 +115,6 @@
         <div class="instructions">
             <p><strong>使い方:</strong></p>
             <ol>
-                <li>まず、このファイルをローカルのウェブサーバーでホストし、<code>http://localhost/</code> (または設定したリダイレクトURI) でアクセスできるようにしてください。
-                </li>
                 <li>「Twitch認証」リンクをクリックし、Twitchのページでログインしてアプリケーションを認証します。</li>
                 <li>認証が成功すると、検索フォームが表示されます。</li>
                 <li>「ゲームIDを名前で検索」セクションで、検索したいゲーム名を入力します。</li>
