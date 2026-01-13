@@ -30,7 +30,16 @@ const tagLogicControl = document.getElementById('tagLogicControl');
 
 // --- 認証リンク設定 ---
 const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
-if (authLink) authLink.href = authUrl;
+if (authLink) {
+    authLink.href = authUrl;
+    // Debug: Show actual Redirect URI to help troubleshooting
+    const debugInfo = document.createElement('div');
+    debugInfo.style.marginTop = '10px';
+    debugInfo.style.fontSize = '0.8rem';
+    debugInfo.style.color = '#888';
+    debugInfo.innerHTML = `<strong>Debug Info:</strong><br>Sending Redirect URI: <code>${redirectUri}</code><br>Please ensure this Exact URI is registered in Twitch Console.`;
+    if (authSection) authSection.appendChild(debugInfo);
+}
 
 // --- ダークモードロジック ---
 function setDarkMode(isDark) {
