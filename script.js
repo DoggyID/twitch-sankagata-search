@@ -429,18 +429,22 @@ async function searchLiveStreams() {
             streamsToDisplay = streamsToDisplay.filter(stream => stream.viewer_count <= maxViewers);
         }
 
-        // --- Sort streams ---
+
+        // --- Store to global for resorts ---
+        currentFilteredStreams = streamsToDisplay;
+
+        // --- Sort streams initially ---
         const sortOrder = sortOrderSelect.value;
         if (sortOrder === 'asc') {
-            streamsToDisplay.sort((a, b) => a.viewer_count - b.viewer_count);
+            currentFilteredStreams.sort((a, b) => a.viewer_count - b.viewer_count);
         } else {
-            streamsToDisplay.sort((a, b) => b.viewer_count - a.viewer_count);
+            currentFilteredStreams.sort((a, b) => b.viewer_count - a.viewer_count);
         }
 
         // --- START: Fetch user profile pictures for FILTERED streams ---
-        if (streamsToDisplay.length > 0) {
-            streamsResultDiv.innerHTML = `<p>${streamsToDisplay.length}件の配信が見つかりました。配信者のアイコンを取得中... (並び替え: ${sortOrder === 'asc' ? '視聴者数が少ない順' : '視聴者数が多い順'})</p>`;
-            const userIds = [...new Set(streamsToDisplay.map(s => s.user_id))];
+        if (currentFilteredStreams.length > 0) {
+            streamsResultDiv.innerHTML = `<p>${currentFilteredStreams.length}件の配信が見つかりました。配信者のアイコンを取得中... (並び替え: ${sortOrder === 'asc' ? '視聴者数が少ない順' : '視聴者数が多い順'})</p>`;
+            const userIds = [...new Set(currentFilteredStreams.map(s => s.user_id))];
             const userProfiles = {};
 
             for (let i = 0; i < userIds.length; i += 100) {
@@ -464,11 +468,11 @@ async function searchLiveStreams() {
                 await new Promise(resolve => setTimeout(resolve, 300)); // Rate limit
             }
 
-            streamsToDisplay.forEach(stream => {
+            currentFilteredStreams.forEach(stream => {
                 stream.profile_image_url = userProfiles[stream.user_id];
             });
 
-            displayStreams(streamsToDisplay);
+            displayStreams(currentFilteredStreams);
         } else {
             streamsResultDiv.innerHTML = `<p class="result-count">0件の配信が見つかりました。</p><p>指定された条件に一致するライブ配信は見つかりませんでした。</p>`;
         }
@@ -479,6 +483,27 @@ async function searchLiveStreams() {
         streamsResultDiv.innerHTML = `<p class="error">ライブ配信検索中にエラーが発生しました:<br>${error.message}</p>`;
     }
 }
+
+// --- Sorting Logic ---
+let currentFilteredStreams = [];
+
+function sortStreams() {
+    const sortOrder = sortOrderSelect.value;
+    if (sortOrder === 'asc') {
+        currentFilteredStreams.sort((a, b) => a.viewer_count - b.viewer_count);
+    } else {
+        currentFilteredStreams.sort((a, b) => b.viewer_count - a.viewer_count);
+    }
+    // Update the sort info text if it exists (optional, or just re-render)
+    displayStreams(currentFilteredStreams);
+}
+
+// Add event listener for sort change
+sortOrderSelect.addEventListener('change', () => {
+    if (currentFilteredStreams.length > 0) {
+        sortStreams();
+    }
+});
 
 function displayStreams(streams) {
     let htmlContent = `<p class="result-count">${streams.length}件の配信が見つかりました。</p>`;
