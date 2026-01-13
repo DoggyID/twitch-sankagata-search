@@ -1,0 +1,630 @@
+/* --- Color Variables --- */
+:root {
+    --bg-color: #f4f4f8;
+    --text-color: #333;
+    --container-bg: #fff;
+    --container-shadow: rgba(0, 0, 0, 0.1);
+    --twitch-purple: #6441a5;
+    --twitch-purple-hover: #4b2f7a;
+    --border-color: #ddd;
+    --border-color-light: #eee;
+    --stream-item-bg: #f9f9f9;
+    --stream-item-shadow: rgba(0, 0, 0, 0.05);
+    --stream-title-color: #333;
+    --stream-info-color: #555;
+    --stream-info-strong: #111;
+    --input-bg: #fff;
+    --input-border: #ddd;
+    --instructions-bg: #e9ecef;
+    --game-id-result-bg: #f0f0f0;
+    --segment-border: #6441a5;
+    --segment-bg: #fff;
+    --segment-color: #6441a5;
+    --segment-hover-bg: #f0e9f8;
+    --segment-active-bg: #6441a5;
+    --segment-active-color: #fff;
+}
+
+body.dark-mode {
+    --bg-color: #18181b;
+    /* Twitch Dark BG */
+    --text-color: #e0e0e0;
+    --container-bg: #1f1f23;
+    /* Twitch Dark BG 2 */
+    --container-shadow: rgba(0, 0, 0, 0.3);
+    --twitch-purple: #9147ff;
+    /* Twitch Purple Light */
+    --twitch-purple-hover: #772ce8;
+    --border-color: #46464a;
+    --border-color-light: #39393d;
+    --stream-item-bg: #2a2a2e;
+    --stream-item-shadow: rgba(0, 0, 0, 0.2);
+    --stream-title-color: #f0f0f0;
+    --stream-info-color: #c0c0c0;
+    --stream-info-strong: #fff;
+    --input-bg: #3a3a3d;
+    --input-border: #505055;
+    --instructions-bg: #2a2a2e;
+    --game-id-result-bg: #2a2a2e;
+    --segment-border: #9147ff;
+    --segment-bg: #1f1f23;
+    --segment-color: #9147ff;
+    --segment-hover-bg: #3a3a3d;
+    --segment-active-bg: #9147ff;
+    --segment-active-color: #fff;
+}
+
+/* --- End Color Variables --- */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: sans-serif;
+    margin: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+    background-color: var(--container-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px var(--container-shadow);
+    transition: background-color 0.3s;
+}
+
+.header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    /* 狭い画面で折り返す */
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+h1,
+h2,
+h3 {
+    color: var(--twitch-purple);
+}
+
+h1 {
+    margin: 0;
+}
+
+a {
+    color: var(--twitch-purple);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+button {
+    padding: 10px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    font-size: 1em;
+    box-sizing: border-box;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+button {
+    background-color: var(--twitch-purple);
+    color: white;
+    cursor: pointer;
+    border-color: var(--twitch-purple);
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: var(--twitch-purple-hover);
+}
+
+.stream-list {
+    list-style: none;
+    padding: 0;
+}
+
+.stream-item {
+    display: grid;
+    /* Fixed width for thumbnail (240px), Flex text, Auto width for actions */
+    grid-template-columns: 240px 1fr auto;
+    gap: 15px;
+    background-color: var(--stream-item-bg);
+    border: 1px solid var(--border-color-light);
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px var(--stream-item-shadow);
+    transition: background-color 0.3s, border-color 0.3s;
+    /* Align items to start */
+    align-items: start;
+}
+
+.stream-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    /* Center vertically relative to the item height if desired, or use align-self */
+    align-self: center;
+}
+
+.thumbnail-wrapper {
+    width: 100%;
+    /* Fills the 240px column */
+    aspect-ratio: 16 / 9;
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.thumbnail-wrapper img.thumbnail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.stream-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    /* Prevent flex child from overflowing */
+}
+
+.button-group {
+    display: flex;
+    justify-content: flex-start;
+    /* Changed from center */
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    /* responsive */
+}
+
+.stream-info h3 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-size: 1.2em;
+    color: var(--stream-title-color);
+}
+
+.stream-info h3 a {
+    color: var(--stream-title-color);
+    /* リンクの色も調整 */
+}
+
+body.dark-mode .stream-info h3 a {
+    color: var(--twitch-purple);
+    /* ダークモードではリンク色を紫に */
+}
+
+.stream-info p {
+    margin: 5px 0;
+    font-size: 0.9em;
+    color: var(--stream-info-color);
+}
+
+.stream-info strong {
+    color: var(--stream-info-strong);
+}
+
+/* Button styles for stream actions */
+.mark-visited-btn {
+    padding: 10px 16px;
+    background-color: transparent;
+    border: 1px solid var(--twitch-purple);
+    color: var(--twitch-purple);
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.mark-visited-btn:hover {
+    background-color: var(--twitch-purple);
+    color: #fff;
+}
+
+.streamer-pfp {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.error {
+    color: #ff4d4d;
+    font-weight: bold;
+}
+
+.result-count {
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.game-id-query-section,
+.filter-options-wrapper {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color-light);
+}
+
+.filter-options-wrapper h3 {
+    margin-bottom: 10px;
+}
+
+.filter-options-fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    /* Mobile-first: 1 column default */
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.filter-group input,
+.filter-group select {
+    width: 100%;
+}
+
+.game-id-query-section input#gameNameInput {
+    display: block;
+    width: 100%;
+    max-width: 600px;
+    min-width: 220px;
+    margin-left: 0;
+}
+
+.label-with-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    min-height: 46px;
+    /* Set min-height to balance with segmented control */
+}
+
+/* --- Segmented Control Styles --- */
+.segmented-control {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--segment-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.segmented-control-button {
+    padding: 10px 20px;
+    border: none;
+    background-color: var(--segment-bg);
+    color: var(--segment-color);
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+    font-size: 1.1em;
+    margin: 0;
+    /* remove default button margin */
+    line-height: 1.2;
+}
+
+.segmented-control-button:not(:last-child) {
+    border-right: 1px solid var(--segment-border);
+}
+
+.segmented-control-button.active {
+    background-color: var(--segment-active-bg);
+    color: var(--segment-active-color);
+}
+
+.segmented-control-button:hover:not(.active) {
+    background-color: var(--segment-hover-bg);
+}
+
+/* Responsive Grid for Filters using Media Queries */
+@media (min-width: 768px) {
+
+    /* Tablet layout */
+    .filter-options-fields {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .filter-group.title-filter {
+        grid-column: span 2;
+        /* Full width */
+    }
+
+    /* viewers and language will automatically take 1 column each */
+    .filter-group.tag-filter {
+        grid-column: span 2;
+        /* Full width */
+    }
+}
+
+@media (min-width: 1024px) {
+
+    /* Desktop layout */
+    .filter-options-fields {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .filter-group.title-filter {
+        grid-column: span 2;
+    }
+
+    .filter-group.viewers-filter {
+        grid-column: span 1;
+    }
+
+    .filter-group.language-filter {
+        grid-column: span 1;
+    }
+
+    .filter-group.tag-filter {
+        grid-column: span 2;
+    }
+}
+
+
+.game-id-query-section p small {
+    display: block;
+    margin-top: 5px;
+}
+
+.container>button {
+    display: block;
+    width: auto;
+    padding: 10px 20px;
+    margin: 0 auto 20px auto;
+}
+
+.button-group {
+    display: flex;
+    justify-content: flex-start;
+    /* Changed from center */
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    /* responsive */
+}
+
+button.secondary-button {
+    background-color: #838383;
+    /* Gray */
+    border-color: #838383;
+}
+
+button.secondary-button:hover {
+    background-color: #606060;
+}
+
+
+.instructions {
+    background-color: var(--instructions-bg);
+    padding: 15px;
+    border-left: 3px solid var(--twitch-purple);
+    border-radius: 4px;
+    margin-top: 20px;
+    transition: background-color 0.3s;
+}
+
+#gameIdQueryResult {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: var(--game-id-result-bg);
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+/* --- Dark Mode Toggle Switch --- */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-switch {
+    display: inline-block;
+    height: 26px;
+    position: relative;
+    width: 50px;
+}
+
+.theme-switch input {
+    display: none;
+}
+
+.slider {
+    background-color: #ccc;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+}
+
+.slider:before {
+    background-color: #fff;
+    bottom: 3px;
+    content: "";
+    height: 20px;
+    left: 3px;
+    position: absolute;
+    transition: .4s;
+    width: 20px;
+}
+
+input:checked+.slider {
+    background-color: var(--twitch-purple);
+}
+
+input:checked+.slider:before {
+    transform: translateX(24px);
+}
+
+.slider.round {
+    border-radius: 26px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.theme-switch-label {
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+body.dark-mode .theme-switch-label {
+    color: var(--twitch-purple);
+}
+
+/* --- End Dark Mode Toggle Switch --- */
+
+/* --- Visited Streams Accordion --- */
+.visited-streams-container {
+    margin: 20px 0;
+}
+
+details.visited-accordion {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--container-bg);
+    overflow: hidden;
+}
+
+details.visited-accordion summary {
+    padding: 12px 15px;
+    background-color: var(--stream-item-bg);
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--twitch-purple);
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.2s;
+}
+
+details.visited-accordion[open] summary {
+    border-bottom: 1px solid var(--border-color);
+}
+
+details.visited-accordion summary:hover {
+    background-color: var(--border-color-light);
+}
+
+.visited-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.visited-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 15px;
+    border-bottom: 1px solid var(--border-color-light);
+    font-size: 0.9em;
+}
+
+.visited-item:last-child {
+    border-bottom: none;
+}
+
+.visited-item img {
+    width: 40px;
+    height: 22px;
+    object-fit: cover;
+    border-radius: 2px;
+    margin-right: 10px;
+}
+
+.visited-item .visited-info {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.visited-item .visited-info a {
+    color: var(--text-color);
+}
+
+.visited-item .visited-info a:hover {
+    color: var(--twitch-purple);
+}
+
+.visited-item .visited-meta {
+    font-size: 0.8em;
+    color: var(--stream-info-color);
+    margin-left: 10px;
+}
+
+/* 既読状態のスタイル (非表示にするため不要になりましたが念のため残すか削除) */
+/*
+.stream-item.visited {
+    opacity: 0.6;
+    filter: grayscale(0.5);
+}
+*/
+
+.visited-badge {
+    display: inline-block;
+    background-color: var(--border-color);
+    color: var(--stream-info-color);
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.unvisited-badge {
+    display: inline-block;
+    background-color: var(--twitch-purple);
+    /* Active status color */
+    color: #fff;
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+body.dark-mode .visited-badge {
+    background-color: #46464a;
+    color: #ccc;
+}

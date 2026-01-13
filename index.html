@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Twitch ライブ配信検索</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header-wrapper">
+            <h1>Twitch ライブ配信検索</h1>
+            <!-- Dark Mode Toggle -->
+            <div class="theme-switch-wrapper">
+                <span class="theme-switch-label" id="theme-label-text">ライトモード</span>
+                <label class="theme-switch" for="theme-toggle">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <!-- End Dark Mode Toggle -->
+        </div>
+
+        <div id="authSection">
+            <a id="authLink" href="#">Twitch認証</a>
+            <p id="authStatus">Twitchアカウントで認証してください。</p>
+        </div>
+
+        <div id="searchSection" style="display: none;">
+            <div class="game-id-query-section">
+                <h3>ゲームIDを名前で検索</h3>
+                <input type="text" id="gameNameInput" value="Overwatch 2" placeholder="例: Apex Legends">
+            </div>
+
+            <div class="filter-options-wrapper">
+                <h3>配信フィルターオプション</h3>
+                <div class="filter-options-fields">
+                    <div class="filter-group title-filter">
+                        <label for="titleQueryInput">配信タイトルに含まれるキーワード (任意):</label>
+                        <input type="text" id="titleQueryInput" value="参加" placeholder="例: 初心者, ランク">
+                    </div>
+                    <div class="filter-group viewers-filter">
+                        <label for="maxViewersInput">最大視聴者数 (指定なしは全件):</label>
+                        <input type="number" id="maxViewersInput" placeholder="例: 100">
+                    </div>
+                    <div class="filter-group language-filter">
+                        <label for="languageSelect">言語:</label>
+                        <select id="languageSelect">
+                            <option value="ja">日本語 (Japanese)</option>
+                            <option value="en">英語 (English)</option>
+                            <option value="ko">韓国語 (Korean)</option>
+                            <option value="zh">中国語 (Chinese)</option>
+                            <option value="es">スペイン語 (Spanish)</option>
+                            <option value="fr">フランス語 (French)</option>
+                            <option value="de">ドイツ語 (German)</option>
+                            <option value="">すべての言語</option>
+                        </select>
+                    </div>
+                    <div class="filter-group tag-filter">
+                        <div class="label-with-toggle">
+                            <label for="tagInput">含めるタグ (カンマ区切り):</label>
+                            <div class="segmented-control" id="tagLogicControl">
+                                <button type="button" class="segmented-control-button active"
+                                    data-logic="OR">OR</button>
+                                <button type="button" class="segmented-control-button" data-logic="AND">AND</button>
+                            </div>
+                        </div>
+                        <input type="text" id="tagInput" placeholder="例: 協力プレイ,初見さん歓迎">
+                    </div>
+                    <div class="filter-group tag-filter">
+                        <div class="label-with-toggle">
+                            <label for="excludeTagInput">除外タグ (カンマ区切り):</label>
+                        </div>
+                        <input type="text" id="excludeTagInput" placeholder="例: VTuber,大会">
+                    </div>
+                    <div class="filter-group sort-order">
+                        <label for="sortOrderSelect">並び替え:</label>
+                        <select id="sortOrderSelect">
+                            <option value="desc">視聴者数が多い順</option>
+                            <option value="asc">視聴者数が少ない順</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="handleGameIdAndStreamSearch()">指定条件で配信を検索</button>
+                <button id="resetSettingsBtn" class="secondary-button">リセット</button>
+            </div>
+            <div id="gameIdQueryResult">
+                <p>ゲームID検索結果はここに表示されます。</p>
+            </div>
+
+            <div class="search-form" style="display:none;">
+                <label for="gameIdInput">ゲームID:</label>
+                <input type="text" id="gameIdInput" readonly>
+            </div>
+            <h2>検索結果 (ライブ配信):</h2>
+            <div id="streamsResult">
+                <p>ここに検索結果が表示されます。</p>
+            </div>
+
+            <!-- Visited Streams Accordion -->
+            <div class="visited-streams-container" id="visitedContainer" style="display: none;">
+                <details class="visited-accordion">
+                    <summary>閲覧済みの配信 (<span id="visitedCount">0</span>)</summary>
+                    <ul id="visitedList" class="visited-list">
+                        <!-- Visited items will be added here -->
+                    </ul>
+                </details>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <p><strong>使い方:</strong></p>
+            <ol>
+                <li>まず、このファイルをローカルのウェブサーバーでホストし、<code>http://localhost/</code> (または設定したリダイレクトURI) でアクセスできるようにしてください。
+                </li>
+                <li>「Twitch認証」リンクをクリックし、Twitchのページでログインしてアプリケーションを認証します。</li>
+                <li>認証が成功すると、検索フォームが表示されます。</li>
+                <li>「ゲームIDを名前で検索」セクションで、検索したいゲーム名を入力します。</li>
+                <li>「配信フィルターオプション」で、言語、配信タイトルに含まれるキーワード、最大視聴者数、含めるタグ、除外するタグを指定します。</li>
+                <li>「指定条件で配信を検索」ボタンをクリックします。</li>
+                <li>まずゲームIDが検索され、その後、指定された条件に一致するライブ配信が表示されます。</li>
+            </ol>
+            <p><small><strong>注意:</strong>
+                    利用可能な言語コードはTwitchのAPIドキュメントで確認できますが、ここでは主要なものをリストしています。「すべての言語」を選択すると、言語フィルターなしで検索します。
+                    含めるタグの検索方法は、入力欄の横にあるボタンで「OR」(いずれか)と「AND」(すべて)を切り替えられます。
+                    除外タグに指定されたタグが一つでも含まれる配信は、検索結果から除外されます。</small></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
