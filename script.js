@@ -574,3 +574,75 @@ function displayStreams(streams) {
         }
     });
 }
+
+// --- CHAOS MODE ---
+document.addEventListener('DOMContentLoaded', () => {
+    const chaosBtn = document.getElementById('chaosBtn');
+    if (chaosBtn) {
+        chaosBtn.addEventListener('click', () => {
+            activateChaos();
+        });
+    }
+});
+
+function activateChaos() {
+    alert("Warning: CHAOS MODE ACTIVATED. Refresh page to stop.");
+
+    // 1. Rainbow Background
+    let hue = 0;
+    setInterval(() => {
+        document.body.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
+        document.documentElement.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
+        hue = (hue + 20) % 360;
+    }, 50);
+
+    // 2. Rotate Body randomly
+    setInterval(() => {
+        const deg = Math.random() * 20 - 10; // -10 to 10 degrees shake
+        document.body.style.transform = `rotate(${deg}deg)`;
+    }, 100);
+
+    // 3. Chaos Cats
+    setInterval(() => {
+        const cat = document.createElement('img');
+        cat.src = 'chaos_cat.png';
+        cat.style.position = 'fixed';
+        cat.style.left = Math.random() * window.innerWidth + 'px';
+        cat.style.top = Math.random() * window.innerHeight + 'px';
+        cat.style.width = (50 + Math.random() * 250) + 'px';
+        cat.style.zIndex = 9999;
+        cat.style.transition = 'all 3s ease-out';
+        cat.style.pointerEvents = 'none';
+        document.body.appendChild(cat);
+
+        // Spin the cat
+        let rotation = 0;
+        const spinInterval = setInterval(() => {
+            rotation += 20;
+            cat.style.transform = `rotate(${rotation}deg)`;
+        }, 50);
+
+        // Move cat
+        setTimeout(() => {
+            cat.style.left = Math.random() * window.innerWidth + 'px';
+            cat.style.top = Math.random() * window.innerHeight + 'px';
+        }, 100);
+
+        // Remove cat after a while
+        setTimeout(() => {
+            clearInterval(spinInterval);
+            cat.remove();
+        }, 4000);
+    }, 300); // Rapid cats
+
+    // 4. Random Text Colors and sizes
+    setInterval(() => {
+        const headings = document.querySelectorAll('h1, h2, h3, p, a, button');
+        headings.forEach(el => {
+            el.style.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+            if (Math.random() > 0.9) {
+                el.style.fontSize = (Math.random() * 2 + 0.5) + 'em';
+            }
+        });
+    }, 500);
+}
