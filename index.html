@@ -6,9 +6,9 @@
     <title>Twitch ライブ配信検索</title>
     <link rel="stylesheet" href="style.css">
     <script>
-        // Apply theme immediately to prevent flash
+        // Apply theme immediately to prevent flash (Default: Dark)
         const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
+        if (savedTheme !== 'light') {
             document.documentElement.classList.add('dark-mode');
         }
     </script>

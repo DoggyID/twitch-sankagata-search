@@ -35,16 +35,17 @@ const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&red
 authLink.href = authUrl;
 
 // --- 認証後の処理 (ページ読み込み時) ---
+// --- 認証後の処理 (ページ読み込み時) ---
 window.onload = function () {
     // --- Dark Mode Logic ---
     function setDarkMode(isDark) {
         if (isDark) {
-            document.body.classList.add('dark-mode');
+            document.documentElement.classList.add('dark-mode');
             themeToggle.checked = true;
             themeLabel.textContent = 'ダークモード';
             localStorage.setItem('theme', 'dark');
         } else {
-            document.body.classList.remove('dark-mode');
+            document.documentElement.classList.remove('dark-mode');
             themeToggle.checked = false;
             themeLabel.textContent = 'ライトモード';
             localStorage.setItem('theme', 'light');
@@ -53,10 +54,11 @@ window.onload = function () {
 
     // Check for saved theme in localStorage
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        setDarkMode(true);
+    // Default to Dark Mode unless explicitly 'light'
+    if (savedTheme === 'light') {
+        setDarkMode(false);
     } else {
-        setDarkMode(false); // Default to light
+        setDarkMode(true);
     }
 
     // Add listener for toggle
