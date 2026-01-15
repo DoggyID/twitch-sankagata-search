@@ -568,7 +568,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function activateChaos() {
-    alert("Warning: CHAOS MODE ACTIVATED. Refresh page to stop.");
     let hue = 0;
     setInterval(() => {
         document.body.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
