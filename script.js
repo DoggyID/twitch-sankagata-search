@@ -568,18 +568,34 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function activateChaos() {
-    let hue = 0;
+    // 激しい変色と明滅 (Intense Color Change & Flickering)
     setInterval(() => {
-        document.body.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
-        document.documentElement.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
-        hue = (hue + 20) % 360;
+        const hue = Math.floor(Math.random() * 360);
+        // Flickering: Randomly switch between dark and bright to simulate "Dark Mode" flickering
+        // 10% (Very Dark/Black), 50% (Vibrant), 90% (White/Flash)
+        const rand = Math.random();
+        let lightness;
+        if (rand < 0.3) lightness = 10; // Dark
+        else if (rand < 0.6) lightness = 90; // Flash
+        else lightness = 50; // Color
+
+        const color = `hsl(${hue}, 100%, ${lightness}%)`;
+        document.body.style.backgroundColor = color;
+        document.documentElement.style.backgroundColor = color;
     }, 50);
 
+    // 激しい揺れ (Intense Shaking)
     setInterval(() => {
-        const deg = Math.random() * 20 - 10;
-        document.body.style.transform = `rotate(${deg}deg)`;
-    }, 100);
+        const deg = Math.random() * 40 - 20; // -20 to 20 degrees
+        const x = Math.random() * 40 - 20;   // Translate X
+        const y = Math.random() * 40 - 20;   // Translate Y
+        // Add random scale for extra chaos
+        const scale = 0.8 + Math.random() * 0.4;
 
+        document.body.style.transform = `translate(${x}px, ${y}px) rotate(${deg}deg) scale(${scale})`;
+    }, 30);
+
+    // Text & Element Chaos
     setInterval(() => {
         const headings = document.querySelectorAll('h1, h2, h3, p, a, button');
         headings.forEach(el => {
@@ -588,5 +604,5 @@ function activateChaos() {
                 el.style.fontSize = (Math.random() * 2 + 0.5) + 'em';
             }
         });
-    }, 500);
+    }, 200);
 }
