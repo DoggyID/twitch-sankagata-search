@@ -9,7 +9,11 @@ const authLink = document.getElementById('authLink');
 const authStatus = document.getElementById('authStatus');
 const authSection = document.getElementById('authSection');
 const searchSection = document.getElementById('searchSection');
-const streamsResultDiv = document.getElementById('streamsResult');
+const favoritesResultDiv = document.getElementById('favoritesResult');
+const othersResultDiv = document.getElementById('othersResult');
+const searchStatusDiv = document.getElementById('searchStatus');
+const favCountUI = document.getElementById('favCount');
+const othersCountUI = document.getElementById('othersCount');
 const gameIdInput = document.getElementById('gameIdInput');
 const gameNameInput = document.getElementById('gameNameInput');
 const gameIdQueryResultDiv = document.getElementById('gameIdQueryResult');
@@ -28,6 +32,9 @@ const themeToggle = document.getElementById('theme-toggle');
 const themeLabel = document.getElementById('theme-label-text');
 
 let visitedStreams = []; // Track clicked streams
+let favoriteChannels = []; // user_login[] (lowercased)
+let excludedChannels = []; // user_login[] (lowercased)
+const channelNameCache = {}; // user_login -> user_name (last seen)
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -108,6 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6. Load saved settings
     loadSettings();
     loadVisitedStreams();
+    loadChannelLists();
+    renderChannelLists();
+    setupTabs();
+    setupChannelMgmt();
 });
 
 
@@ -187,6 +198,180 @@ function handleStreamClick(stream) {
     }
 }
 
+// --- Favorite / Excluded Channels Management ---
+function normalizeLogin(login) {
+    return (login || '').trim().toLowerCase();
+}
+
+function loadChannelLists() {
+    try {
+        const fav = localStorage.getItem('twitchFavoriteChannels');
+        if (fav) favoriteChannels = JSON.parse(fav).map(normalizeLogin).filter(Boolean);
+    } catch (e) { favoriteChannels = []; }
+    try {
+        const ex = localStorage.getItem('twitchExcludedChannels');
+        if (ex) excludedChannels = JSON.parse(ex).map(normalizeLogin).filter(Boolean);
+    } catch (e) { excludedChannels = []; }
+}
+
+function saveFavorites() {
+    localStorage.setItem('twitchFavoriteChannels', JSON.stringify(favoriteChannels));
+}
+
+function saveExcluded() {
+    localStorage.setItem('twitchExcludedChannels', JSON.stringify(excludedChannels));
+}
+
+function isFavorite(login) {
+    return favoriteChannels.includes(normalizeLogin(login));
+}
+
+function isExcluded(login) {
+    return excludedChannels.includes(normalizeLogin(login));
+}
+
+function addFavorite(login) {
+    const n = normalizeLogin(login);
+    if (!n) return false;
+    // Mutual exclusion with excluded list
+    const exIdx = excludedChannels.indexOf(n);
+    if (exIdx !== -1) {
+        excludedChannels.splice(exIdx, 1);
+        saveExcluded();
+    }
+    if (!favoriteChannels.includes(n)) {
+        favoriteChannels.push(n);
+        saveFavorites();
+        return true;
+    }
+    return false;
+}
+
+function removeFavorite(login) {
+    const n = normalizeLogin(login);
+    const idx = favoriteChannels.indexOf(n);
+    if (idx !== -1) {
+        favoriteChannels.splice(idx, 1);
+        saveFavorites();
+        return true;
+    }
+    return false;
+}
+
+function addExcluded(login) {
+    const n = normalizeLogin(login);
+    if (!n) return false;
+    const favIdx = favoriteChannels.indexOf(n);
+    if (favIdx !== -1) {
+        favoriteChannels.splice(favIdx, 1);
+        saveFavorites();
+    }
+    if (!excludedChannels.includes(n)) {
+        excludedChannels.push(n);
+        saveExcluded();
+        return true;
+    }
+    return false;
+}
+
+function removeExcluded(login) {
+    const n = normalizeLogin(login);
+    const idx = excludedChannels.indexOf(n);
+    if (idx !== -1) {
+        excludedChannels.splice(idx, 1);
+        saveExcluded();
+        return true;
+    }
+    return false;
+}
+
+function renderChannelLists() {
+    const favListUI = document.getElementById('favoriteList');
+    const exListUI = document.getElementById('excludeList');
+    const favListCountUI = document.getElementById('favListCount');
+    const exListCountUI = document.getElementById('exListCount');
+
+    if (favListCountUI) favListCountUI.textContent = favoriteChannels.length;
+    if (exListCountUI) exListCountUI.textContent = excludedChannels.length;
+
+    const buildItem = (login, kind) => {
+        const displayName = channelNameCache[login];
+        const label = displayName ? `${displayName} (${login})` : login;
+        return `<li data-login="${login}" data-kind="${kind}">
+            <span class="channel-list-name">${label}</span>
+            <button type="button" class="remove-channel-btn" aria-label="削除">×</button>
+        </li>`;
+    };
+
+    if (favListUI) {
+        favListUI.innerHTML = favoriteChannels.length
+            ? favoriteChannels.map(l => buildItem(l, 'fav')).join('')
+            : '<li class="channel-list-empty">登録なし</li>';
+    }
+    if (exListUI) {
+        exListUI.innerHTML = excludedChannels.length
+            ? excludedChannels.map(l => buildItem(l, 'ex')).join('')
+            : '<li class="channel-list-empty">登録なし</li>';
+    }
+
+    [favListUI, exListUI].forEach(ul => {
+        if (!ul) return;
+        ul.querySelectorAll('.remove-channel-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const li = btn.closest('li');
+                if (!li) return;
+                const login = li.dataset.login;
+                const kind = li.dataset.kind;
+                if (kind === 'fav') removeFavorite(login);
+                else removeExcluded(login);
+                renderChannelLists();
+                if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
+            });
+        });
+    });
+}
+
+function setupChannelMgmt() {
+    const favInput = document.getElementById('favoriteInput');
+    const exInput = document.getElementById('excludeInput');
+    const addFavBtn = document.getElementById('addFavoriteBtn');
+    const addExBtn = document.getElementById('addExcludeBtn');
+
+    const handleAdd = (input, addFn) => {
+        if (!input) return;
+        const val = input.value;
+        if (!val.trim()) return;
+        addFn(val);
+        input.value = '';
+        renderChannelLists();
+        if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
+    };
+
+    if (addFavBtn) addFavBtn.addEventListener('click', () => handleAdd(favInput, addFavorite));
+    if (addExBtn) addExBtn.addEventListener('click', () => handleAdd(exInput, addExcluded));
+    if (favInput) favInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleAdd(favInput, addFavorite); }
+    });
+    if (exInput) exInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleAdd(exInput, addExcluded); }
+    });
+}
+
+// --- Tabs ---
+function setupTabs() {
+    const tabsContainer = document.getElementById('resultTabs');
+    if (!tabsContainer) return;
+    tabsContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.result-tab');
+        if (!btn) return;
+        const tabKey = btn.dataset.tab;
+        tabsContainer.querySelectorAll('.result-tab').forEach(b => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+            panel.classList.toggle('hidden', panel.id !== `tab-${tabKey}`);
+        });
+    });
+}
+
 // --- Settings Management ---
 function saveSettings() {
     if (!gameNameInput) return;
@@ -246,36 +431,15 @@ if (resetSettingsBtn) {
 }
 
 function resetSettings() {
-    if (!confirm('検索条件の設定および視聴済み履歴（キャッシュ）をすべてリセットし、初期状態に戻しますか？')) {
+    if (!confirm('既視聴履歴をクリアしますか？\n(検索条件・お気に入り・除外リストは保持されます)')) {
         return;
     }
-    localStorage.removeItem('twitchSearchSettings');
     localStorage.removeItem('twitchVisitedStreams');
     visitedStreams = [];
     updateVisitedUI();
-
-    if (gameNameInput) gameNameInput.value = 'Overwatch 2';
-    if (titleQueryInput) titleQueryInput.value = '参加';
-    if (maxViewersInput) maxViewersInput.value = '';
-    if (languageSelect) languageSelect.value = 'ja';
-    if (tagInput) tagInput.value = '';
-    if (excludeTagInput) excludeTagInput.value = '';
-    if (sortOrderSelect) sortOrderSelect.value = 'desc';
-
-    const tagLogicControl = document.getElementById('tagLogicControl');
-    if (tagLogicControl) {
-        tagLogicControl.querySelectorAll('.segmented-control-button').forEach(btn => {
-            if (btn.dataset.logic === 'OR') {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
+    if (currentFilteredStreams.length > 0) {
+        renderResults(currentFilteredStreams);
     }
-
-    if (streamsResultDiv) streamsResultDiv.innerHTML = '<p>設定と履歴をリセットしました。「指定条件で配信を検索」ボタンを押して再検索してください。</p>';
-    if (gameIdQueryResultDiv) gameIdQueryResultDiv.innerHTML = '<p>ゲームID検索結果はここに表示されます。</p>';
-    if (gameIdInput) gameIdInput.value = '';
 }
 
 // --- Game ID & Stream Search ---
@@ -288,11 +452,11 @@ async function handleGameIdAndStreamSearch() {
         if (gameFound) {
             searchLiveStreams();
         } else {
-            streamsResultDiv.innerHTML = '<p class="error">指定されたゲーム名が見つからなかったため、配信を検索できません。</p>';
+            setSearchStatus('<p class="error">指定されたゲーム名が見つからなかったため、配信を検索できません。</p>');
         }
     } else {
         gameIdQueryResultDiv.innerHTML = '<p class="error">検索するゲーム名を入力してください。</p>';
-        streamsResultDiv.innerHTML = '';
+        setSearchStatus('');
     }
 }
 
@@ -304,7 +468,7 @@ async function getGameIdByName(gameName) {
     }
 
     gameIdQueryResultDiv.innerHTML = `<p>「${gameName}」のIDを検索中...</p>`;
-    streamsResultDiv.innerHTML = '';
+    setSearchStatus('');
     const gameApiUrl = `https://api.twitch.tv/helix/games?name=${encodeURIComponent(gameName)}`;
 
     try {
@@ -345,7 +509,7 @@ async function getGameIdByName(gameName) {
 // --- Search Live Streams ---
 async function searchLiveStreams() {
     if (!currentAccessToken) {
-        streamsResultDiv.innerHTML = '<p class="error">エラー: Twitch認証が完了していません。</p>';
+        setSearchStatus('<p class="error">エラー: Twitch認証が完了していません。</p>');
         return;
     }
 
@@ -367,7 +531,7 @@ async function searchLiveStreams() {
     if (titleQuery) searchMessage += `、タイトルに「${titleQueryInput.value.trim()}」を含む`;
     if (!isNaN(maxViewers)) searchMessage += `、最大視聴者数「${maxViewers}」`;
     searchMessage += `で配信を検索中...`;
-    streamsResultDiv.innerHTML = `<p>${searchMessage}</p>`;
+    setSearchStatus(`<p>${searchMessage}</p>`);
 
     let allStreams = [];
     let cursor = null;
@@ -376,7 +540,7 @@ async function searchLiveStreams() {
     try {
         do {
             if (page > 1) {
-                streamsResultDiv.innerHTML = `<p>${searchMessage} (現在${allStreams.length}件取得済み、次のページを検索中...)</p>`;
+                setSearchStatus(`<p>${searchMessage} (現在${allStreams.length}件取得済み、次のページを検索中...)</p>`);
             }
 
             let streamsApiUrl = `https://api.twitch.tv/helix/streams?game_id=${encodeURIComponent(gameId)}&first=100`;
@@ -450,7 +614,7 @@ async function searchLiveStreams() {
         }
 
         if (currentFilteredStreams.length > 0) {
-            streamsResultDiv.innerHTML = `<p>${currentFilteredStreams.length}件の配信が見つかりました。配信者のアイコンを取得中... (並び替え: ${sortOrder === 'asc' ? '視聴者数が少ない順' : '視聴者数が多い順'})</p>`;
+            setSearchStatus(`<p>${currentFilteredStreams.length}件の配信が見つかりました。配信者のアイコンを取得中... (並び替え: ${sortOrder === 'asc' ? '視聴者数が少ない順' : '視聴者数が多い順'})</p>`);
             const userIds = [...new Set(currentFilteredStreams.map(s => s.user_id))];
             const userProfiles = {};
 
@@ -474,15 +638,21 @@ async function searchLiveStreams() {
                 stream.profile_image_url = userProfiles[stream.user_id];
             });
 
-            displayStreams(currentFilteredStreams);
+            setSearchStatus(`<p class="result-count">${currentFilteredStreams.length}件の配信が見つかりました。</p>`);
+            renderResults(currentFilteredStreams);
         } else {
-            streamsResultDiv.innerHTML = `<p class="result-count">0件の配信が見つかりました。</p><p>指定された条件に一致するライブ配信は見つかりませんでした。</p>`;
+            setSearchStatus(`<p class="result-count">0件の配信が見つかりました。</p><p>指定された条件に一致するライブ配信は見つかりませんでした。</p>`);
+            renderResults([]);
         }
 
     } catch (error) {
         console.error('APIリクエストエラー (ストリーム検索):', error);
-        streamsResultDiv.innerHTML = `<p class="error">ライブ配信検索中にエラーが発生しました:<br>${error.message}</p>`;
+        setSearchStatus(`<p class="error">ライブ配信検索中にエラーが発生しました:<br>${error.message}</p>`);
     }
+}
+
+function setSearchStatus(html) {
+    if (searchStatusDiv) searchStatusDiv.innerHTML = html;
 }
 
 // --- Sorting ---
@@ -497,7 +667,7 @@ function sortStreams(andDisplay = true) {
         currentFilteredStreams.sort((a, b) => b.viewer_count - a.viewer_count);
     }
     if (andDisplay && currentFilteredStreams.length > 0) {
-        displayStreams(currentFilteredStreams);
+        renderResults(currentFilteredStreams);
     }
 }
 
@@ -507,18 +677,57 @@ sortOrderSelect.addEventListener('change', () => {
     }
 });
 
-function displayStreams(streams) {
-    let htmlContent = `<p class="result-count">${streams.length}件の配信が見つかりました。</p>`;
-    htmlContent += '<ul class="stream-list">';
+function renderResults(streams) {
+    // Cache display names for management UI
+    streams.forEach(s => {
+        const n = normalizeLogin(s.user_login);
+        if (n) channelNameCache[n] = s.user_name;
+    });
+
+    const favList = [];
+    const othersList = [];
+    streams.forEach(stream => {
+        const login = normalizeLogin(stream.user_login);
+        if (isExcluded(login)) return;
+        if (isFavorite(login)) favList.push(stream);
+        else othersList.push(stream);
+    });
+
+    // Visited filtering: only hide from "others" tab
+    const othersVisible = othersList.filter(s => !visitedStreams.some(v => v.user_login === s.user_login));
+
+    if (favCountUI) favCountUI.textContent = favList.length;
+    if (othersCountUI) othersCountUI.textContent = othersVisible.length;
+
+    renderStreamList(favoritesResultDiv, favList, {
+        emptyMsg: '<p>お気に入り登録された配信者は現在ライブ配信していません。</p>'
+    });
+    renderStreamList(othersResultDiv, othersVisible, {
+        emptyMsg: '<p>表示できる配信がありません。</p>'
+    });
+
+    // Update the management list display names now that cache is populated
+    renderChannelLists();
+}
+
+function renderStreamList(targetDiv, streams, opts = {}) {
+    if (!targetDiv) return;
+
+    if (!streams || streams.length === 0) {
+        targetDiv.innerHTML = opts.emptyMsg || '<p>表示する配信はありません。</p>';
+        return;
+    }
+
+    const placeholderPfp = 'https://static-cdn.jtvnw.net/jtv_user_pictures/8a6381c7-d0c0-4576-b179-38bd5ce1d6af-profile_image-70x70.png';
+    let htmlContent = '<ul class="stream-list">';
     streams.forEach(stream => {
         const thumbnailUrl = stream.thumbnail_url.replace('{width}', '640').replace('{height}', '360');
-        const placeholderPfp = 'https://static-cdn.jtvnw.net/jtv_user_pictures/8a6381c7-d0c0-4576-b179-38bd5ce1d6af-profile_image-70x70.png';
-        const isVisited = visitedStreams.some(s => s.user_login === stream.user_login);
-
-        if (isVisited) return;
+        const login = normalizeLogin(stream.user_login);
+        const favBtnLabel = isFavorite(login) ? '★ お気に入り解除' : '☆ お気に入り';
+        const visited = visitedStreams.some(v => v.user_login === stream.user_login);
 
         htmlContent += `
-            <li class="stream-item" data-user="${stream.user_login}">
+            <li class="stream-item${visited ? ' visited' : ''}" data-user="${stream.user_login}">
                 <div class="thumbnail-wrapper">
                     <img src="${thumbnailUrl}" alt="${stream.user_name} の配信サムネイル" class="thumbnail">
                 </div>
@@ -528,33 +737,52 @@ function displayStreams(streams) {
                         <img src="${stream.profile_image_url || placeholderPfp}" alt="" class="streamer-pfp">
                         配信者: <strong>${stream.user_name} (${stream.user_login})</strong>
                     </p>
-                    <p>視聴者数: <strong>${stream.viewer_count.toLocaleString()}</strong> 人</p>
+                    <p>視聴者数: <strong>${stream.viewer_count.toLocaleString()}</strong> 人${visited ? ' <span class="visited-badge">視聴済</span>' : ''}</p>
                 </div>
                 <div class="stream-actions">
-                    <button class="mark-visited-btn">既視聴にする</button>
+                    <button type="button" class="toggle-fav-btn">${favBtnLabel}</button>
+                    <button type="button" class="exclude-btn">🚫 除外</button>
+                    <button type="button" class="mark-visited-btn">既視聴にする</button>
                 </div>
             </li>
         `;
     });
     htmlContent += '</ul>';
-    streamsResultDiv.innerHTML = htmlContent;
+    targetDiv.innerHTML = htmlContent;
 
     const streamMap = new Map(streams.map(s => [s.user_login, s]));
-    const streamItems = streamsResultDiv.querySelectorAll('.stream-item');
-    streamItems.forEach(item => {
+    targetDiv.querySelectorAll('.stream-item').forEach(item => {
         const userLogin = item.dataset.user;
         const stream = streamMap.get(userLogin);
-        if (stream) {
-            const links = item.querySelectorAll('a');
-            links.forEach(link => {
-                link.addEventListener('click', () => handleStreamClick(stream));
+        if (!stream) return;
+
+        item.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => handleStreamClick(stream));
+        });
+
+        const markVisitedBtn = item.querySelector('.mark-visited-btn');
+        if (markVisitedBtn) {
+            markVisitedBtn.addEventListener('click', () => handleStreamClick(stream));
+        }
+
+        const favBtn = item.querySelector('.toggle-fav-btn');
+        if (favBtn) {
+            favBtn.addEventListener('click', () => {
+                if (isFavorite(stream.user_login)) removeFavorite(stream.user_login);
+                else addFavorite(stream.user_login);
+                renderChannelLists();
+                if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
             });
-            const markVisitedBtn = item.querySelector('.mark-visited-btn');
-            if (markVisitedBtn) {
-                markVisitedBtn.addEventListener('click', (e) => {
-                    handleStreamClick(stream);
-                });
-            }
+        }
+
+        const excludeBtn = item.querySelector('.exclude-btn');
+        if (excludeBtn) {
+            excludeBtn.addEventListener('click', () => {
+                if (!confirm(`「${stream.user_name}」を検索除外に追加しますか？`)) return;
+                addExcluded(stream.user_login);
+                renderChannelLists();
+                if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
+            });
         }
     });
 }

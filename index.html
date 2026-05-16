@@ -94,10 +94,32 @@
 
             <div class="button-group">
                 <button onclick="handleGameIdAndStreamSearch()">指定条件で配信を検索</button>
-                <button id="resetSettingsBtn" class="secondary-button">リセット</button>
+                <button id="resetSettingsBtn" class="secondary-button" title="閲覧済み履歴のみクリアします">リセット</button>
                 <button id="chaosBtn"
                     style="background-color: #ff00ff; font-weight: bold; border-color: #ff00ff;">😺</button>
             </div>
+
+            <!-- Channel Management Panel -->
+            <details class="channel-management">
+                <summary>登録チャンネル管理 (お気に入り <span id="favListCount">0</span> / 除外 <span id="exListCount">0</span>)</summary>
+                <div class="channel-mgmt-section">
+                    <h4>⭐ お気に入り</h4>
+                    <div class="channel-input-row">
+                        <input type="text" id="favoriteInput" placeholder="user_login を入力 (例: shroud)">
+                        <button id="addFavoriteBtn" type="button">追加</button>
+                    </div>
+                    <ul id="favoriteList" class="channel-list"></ul>
+                </div>
+                <div class="channel-mgmt-section">
+                    <h4>🚫 検索除外</h4>
+                    <div class="channel-input-row">
+                        <input type="text" id="excludeInput" placeholder="user_login を入力">
+                        <button id="addExcludeBtn" type="button">追加</button>
+                    </div>
+                    <ul id="excludeList" class="channel-list"></ul>
+                </div>
+            </details>
+
             <div id="gameIdQueryResult">
                 <p>ゲームID検索結果はここに表示されます。</p>
             </div>
@@ -106,19 +128,35 @@
                 <label for="gameIdInput">ゲームID:</label>
                 <input type="text" id="gameIdInput" readonly>
             </div>
+
             <h2>検索結果 (ライブ配信):</h2>
-            <div id="streamsResult">
-                <p>ここに検索結果が表示されます。</p>
+            <div id="searchStatus"></div>
+
+            <!-- Result Tabs -->
+            <div class="result-tabs" id="resultTabs">
+                <button type="button" class="result-tab active" data-tab="favorites">⭐ お気に入り (<span id="favCount">0</span>)</button>
+                <button type="button" class="result-tab" data-tab="others">その他 (<span id="othersCount">0</span>)</button>
             </div>
 
-            <!-- Visited Streams Accordion -->
-            <div class="visited-streams-container" id="visitedContainer" style="display: none;">
-                <details class="visited-accordion">
-                    <summary>閲覧済みの配信 (<span id="visitedCount">0</span>)</summary>
-                    <ul id="visitedList" class="visited-list">
-                        <!-- Visited items will be added here -->
-                    </ul>
-                </details>
+            <div class="tab-panel" id="tab-favorites">
+                <div id="favoritesResult">
+                    <p>お気に入り登録された配信者がライブ中のときにここに表示されます。</p>
+                </div>
+            </div>
+            <div class="tab-panel hidden" id="tab-others">
+                <div id="othersResult">
+                    <p>ここに検索結果が表示されます。</p>
+                </div>
+
+                <!-- Visited Streams Accordion -->
+                <div class="visited-streams-container" id="visitedContainer" style="display: none;">
+                    <details class="visited-accordion">
+                        <summary>閲覧済みの配信 (<span id="visitedCount">0</span>)</summary>
+                        <ul id="visitedList" class="visited-list">
+                            <!-- Visited items will be added here -->
+                        </ul>
+                    </details>
+                </div>
             </div>
         </div>
 

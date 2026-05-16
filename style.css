@@ -629,3 +629,165 @@ html.dark-mode .visited-badge {
     background-color: #46464a;
     color: #ccc;
 }
+
+/* --- Result Tabs --- */
+.result-tabs {
+    display: flex;
+    gap: 6px;
+    margin: 12px 0 8px;
+    border-bottom: 2px solid var(--stream-item-shadow, rgba(0,0,0,0.1));
+}
+
+.result-tab {
+    background: transparent;
+    color: inherit;
+    border: 1px solid transparent;
+    border-bottom: none;
+    padding: 8px 16px;
+    font-size: 0.95em;
+    cursor: pointer;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.result-tab:hover:not(.active) {
+    background-color: var(--stream-item-bg, #f0f0f0);
+}
+
+.result-tab.active {
+    background-color: var(--stream-item-bg, #fff);
+    border-color: var(--stream-item-shadow, rgba(0,0,0,0.1));
+    font-weight: bold;
+}
+
+.tab-panel.hidden {
+    display: none;
+}
+
+/* --- Channel Management --- */
+.channel-management {
+    margin: 12px 0;
+    padding: 8px 12px;
+    background-color: var(--stream-item-bg, #f9f9f9);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px var(--stream-item-shadow, rgba(0,0,0,0.05));
+}
+
+.channel-management summary {
+    cursor: pointer;
+    font-weight: bold;
+    padding: 4px 0;
+}
+
+.channel-mgmt-section {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--stream-item-shadow, rgba(0,0,0,0.1));
+}
+
+.channel-mgmt-section h4 {
+    margin: 4px 0 8px;
+    font-size: 0.95em;
+}
+
+.channel-input-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.channel-input-row input {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 0.9em;
+}
+
+.channel-input-row button {
+    padding: 6px 14px;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.channel-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.channel-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--stream-item-shadow, rgba(0,0,0,0.05));
+    font-size: 0.9em;
+}
+
+.channel-list li:last-child {
+    border-bottom: none;
+}
+
+.channel-list-name {
+    word-break: break-all;
+}
+
+.channel-list-empty {
+    color: #888;
+    font-style: italic;
+    justify-content: flex-start !important;
+}
+
+.remove-channel-btn {
+    background: transparent;
+    border: none;
+    color: #c0392b;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0 6px;
+    line-height: 1;
+}
+
+.remove-channel-btn:hover {
+    color: #e74c3c;
+}
+
+/* --- Stream item action buttons (fav/exclude) --- */
+.stream-actions .toggle-fav-btn,
+.stream-actions .exclude-btn {
+    margin-top: 4px;
+    padding: 4px 10px;
+    font-size: 0.85em;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid var(--stream-item-shadow, rgba(0,0,0,0.15));
+    background-color: transparent;
+    color: inherit;
+}
+
+.stream-actions .toggle-fav-btn:hover {
+    background-color: #fff5d6;
+    border-color: #f1c40f;
+}
+
+.stream-actions .exclude-btn:hover {
+    background-color: #fde0e0;
+    border-color: #e74c3c;
+    color: #c0392b;
+}
+
+html.dark-mode .stream-actions .toggle-fav-btn:hover {
+    background-color: #4a3d10;
+    color: #ffd966;
+}
+
+html.dark-mode .stream-actions .exclude-btn:hover {
+    background-color: #4a1f1f;
+    color: #ff8a80;
+}
+
+#searchStatus {
+    margin: 8px 0;
+}
