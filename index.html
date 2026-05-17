@@ -132,31 +132,58 @@
             <h2>検索結果 (ライブ配信):</h2>
             <div id="searchStatus"></div>
 
-            <!-- Result Tabs -->
-            <div class="result-tabs" id="resultTabs">
-                <button type="button" class="result-tab active" data-tab="favorites">⭐ お気に入り (<span id="favCount">0</span>)</button>
-                <button type="button" class="result-tab" data-tab="others">その他 (<span id="othersCount">0</span>)</button>
-            </div>
+            <div class="results-with-preview">
+                <div class="results-main">
+                    <!-- Result Tabs -->
+                    <div class="result-tabs" id="resultTabs">
+                        <button type="button" class="result-tab active" data-tab="favorites">⭐ お気に入り (<span id="favCount">0</span>)</button>
+                        <button type="button" class="result-tab" data-tab="others">その他 (<span id="othersCount">0</span>)</button>
+                    </div>
 
-            <div class="tab-panel" id="tab-favorites">
-                <div id="favoritesResult">
-                    <p>お気に入り登録された配信者がライブ中のときにここに表示されます。</p>
-                </div>
-            </div>
-            <div class="tab-panel hidden" id="tab-others">
-                <div id="othersResult">
-                    <p>ここに検索結果が表示されます。</p>
+                    <div class="tab-panel" id="tab-favorites">
+                        <div id="favoritesResult">
+                            <p>お気に入り登録された配信者がライブ中のときにここに表示されます。</p>
+                        </div>
+                    </div>
+                    <div class="tab-panel hidden" id="tab-others">
+                        <div id="othersResult">
+                            <p>ここに検索結果が表示されます。</p>
+                        </div>
+
+                        <!-- Visited Streams Accordion -->
+                        <div class="visited-streams-container" id="visitedContainer" style="display: none;">
+                            <details class="visited-accordion">
+                                <summary>閲覧済みの配信 (<span id="visitedCount">0</span>)</summary>
+                                <ul id="visitedList" class="visited-list">
+                                    <!-- Visited items will be added here -->
+                                </ul>
+                            </details>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Visited Streams Accordion -->
-                <div class="visited-streams-container" id="visitedContainer" style="display: none;">
-                    <details class="visited-accordion">
-                        <summary>閲覧済みの配信 (<span id="visitedCount">0</span>)</summary>
-                        <ul id="visitedList" class="visited-list">
-                            <!-- Visited items will be added here -->
-                        </ul>
-                    </details>
-                </div>
+                <aside class="preview-panel" id="previewPanel" aria-hidden="true">
+                    <div class="preview-empty" id="previewEmpty">
+                        <p>配信カードの「▶ プレビュー」ボタンで配信を視聴できます。</p>
+                    </div>
+                    <div class="preview-content hidden" id="previewContent">
+                        <div class="preview-header">
+                            <div class="preview-title-block">
+                                <strong id="previewStreamer"></strong>
+                                <span id="previewTitle" class="preview-title"></span>
+                            </div>
+                            <button type="button" id="previewCloseBtn" class="preview-close" aria-label="プレビューを閉じる">×</button>
+                        </div>
+                        <div class="preview-player-wrapper">
+                            <iframe id="previewIframe" allowfullscreen allow="autoplay; encrypted-media" title="Twitch live stream preview"></iframe>
+                        </div>
+                        <div class="preview-actions">
+                            <button type="button" id="previewFavBtn" class="preview-action-btn fav">☆ お気に入り</button>
+                            <button type="button" id="previewExcludeBtn" class="preview-action-btn exclude">🚫 除外</button>
+                            <a id="previewOpenLink" href="#" target="_blank" rel="noopener noreferrer" class="preview-action-btn open">Twitchで開く ↗</a>
+                        </div>
+                    </div>
+                </aside>
             </div>
         </div>
 

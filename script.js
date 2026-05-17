@@ -14,6 +14,16 @@ const othersResultDiv = document.getElementById('othersResult');
 const searchStatusDiv = document.getElementById('searchStatus');
 const favCountUI = document.getElementById('favCount');
 const othersCountUI = document.getElementById('othersCount');
+const previewPanel = document.getElementById('previewPanel');
+const previewEmpty = document.getElementById('previewEmpty');
+const previewContent = document.getElementById('previewContent');
+const previewIframe = document.getElementById('previewIframe');
+const previewStreamerUI = document.getElementById('previewStreamer');
+const previewTitleUI = document.getElementById('previewTitle');
+const previewFavBtn = document.getElementById('previewFavBtn');
+const previewExcludeBtn = document.getElementById('previewExcludeBtn');
+const previewCloseBtn = document.getElementById('previewCloseBtn');
+const previewOpenLink = document.getElementById('previewOpenLink');
 const gameIdInput = document.getElementById('gameIdInput');
 const gameNameInput = document.getElementById('gameNameInput');
 const gameIdQueryResultDiv = document.getElementById('gameIdQueryResult');
@@ -119,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderChannelLists();
     setupTabs();
     setupChannelMgmt();
+    setupPreview();
 });
 
 
@@ -355,6 +366,72 @@ function setupChannelMgmt() {
     if (exInput) exInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleAdd(exInput, addExcluded); }
     });
+}
+
+// --- Preview Panel ---
+let currentPreviewStream = null;
+
+function openPreview(stream) {
+    if (!stream || !previewContent || !previewIframe) return;
+    currentPreviewStream = stream;
+
+    const login = stream.user_login;
+    const parent = window.location.hostname || 'localhost';
+    previewIframe.src = `https://player.twitch.tv/?channel=${encodeURIComponent(login)}&parent=${encodeURIComponent(parent)}&muted=true&autoplay=true`;
+
+    if (previewStreamerUI) previewStreamerUI.textContent = `${stream.user_name} (${login})`;
+    if (previewTitleUI) previewTitleUI.textContent = stream.title || '(タイトルなし)';
+    if (previewOpenLink) previewOpenLink.href = `https://twitch.tv/${login}`;
+
+    updatePreviewActionLabels();
+
+    if (previewEmpty) previewEmpty.classList.add('hidden');
+    previewContent.classList.remove('hidden');
+    if (previewPanel) previewPanel.setAttribute('aria-hidden', 'false');
+
+    // Highlight selected card
+    document.querySelectorAll('.stream-item.previewing').forEach(el => el.classList.remove('previewing'));
+    document.querySelectorAll(`.stream-item[data-user="${login}"]`).forEach(el => el.classList.add('previewing'));
+}
+
+function closePreview() {
+    currentPreviewStream = null;
+    if (previewIframe) previewIframe.src = '';
+    if (previewContent) previewContent.classList.add('hidden');
+    if (previewEmpty) previewEmpty.classList.remove('hidden');
+    if (previewPanel) previewPanel.setAttribute('aria-hidden', 'true');
+    document.querySelectorAll('.stream-item.previewing').forEach(el => el.classList.remove('previewing'));
+}
+
+function updatePreviewActionLabels() {
+    if (!currentPreviewStream || !previewFavBtn) return;
+    const login = currentPreviewStream.user_login;
+    previewFavBtn.textContent = isFavorite(login) ? '★ お気に入り解除' : '☆ お気に入りに追加';
+}
+
+function setupPreview() {
+    if (previewCloseBtn) previewCloseBtn.addEventListener('click', closePreview);
+    if (previewFavBtn) {
+        previewFavBtn.addEventListener('click', () => {
+            if (!currentPreviewStream) return;
+            const login = currentPreviewStream.user_login;
+            if (isFavorite(login)) removeFavorite(login);
+            else addFavorite(login);
+            updatePreviewActionLabels();
+            renderChannelLists();
+            if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
+        });
+    }
+    if (previewExcludeBtn) {
+        previewExcludeBtn.addEventListener('click', () => {
+            if (!currentPreviewStream) return;
+            if (!confirm(`「${currentPreviewStream.user_name}」を検索除外に追加しますか？`)) return;
+            addExcluded(currentPreviewStream.user_login);
+            renderChannelLists();
+            if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
+            closePreview();
+        });
+    }
 }
 
 // --- Tabs ---
@@ -740,6 +817,7 @@ function renderStreamList(targetDiv, streams, opts = {}) {
                     <p>視聴者数: <strong>${stream.viewer_count.toLocaleString()}</strong> 人${visited ? ' <span class="visited-badge">視聴済</span>' : ''}</p>
                 </div>
                 <div class="stream-actions">
+                    <button type="button" class="preview-btn">▶ プレビュー</button>
                     <button type="button" class="toggle-fav-btn">${favBtnLabel}</button>
                     <button type="button" class="exclude-btn">🚫 除外</button>
                     <button type="button" class="mark-visited-btn">既視聴にする</button>
@@ -784,7 +862,18 @@ function renderStreamList(targetDiv, streams, opts = {}) {
                 if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
             });
         }
+
+        const previewBtn = item.querySelector('.preview-btn');
+        if (previewBtn) {
+            previewBtn.addEventListener('click', () => openPreview(stream));
+        }
     });
+
+    // Restore previewing highlight if applicable
+    if (currentPreviewStream) {
+        const login = currentPreviewStream.user_login;
+        targetDiv.querySelectorAll(`.stream-item[data-user="${login}"]`).forEach(el => el.classList.add('previewing'));
+    }
 }
 
 // --- CHAOS MODE ---

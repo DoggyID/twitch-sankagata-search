@@ -791,3 +791,196 @@ html.dark-mode .stream-actions .exclude-btn:hover {
 #searchStatus {
     margin: 8px 0;
 }
+
+/* --- Side-by-side results + preview --- */
+.results-with-preview {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.results-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview-panel {
+    flex: 0 0 380px;
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    background-color: var(--stream-item-bg, #f9f9f9);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px var(--stream-item-shadow, rgba(0,0,0,0.1));
+    padding: 12px;
+}
+
+.preview-empty {
+    color: #888;
+    font-style: italic;
+    text-align: center;
+    padding: 24px 8px;
+}
+
+.preview-content.hidden,
+.preview-empty.hidden {
+    display: none;
+}
+
+.preview-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.preview-title-block {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.preview-title-block strong {
+    font-size: 0.95em;
+    word-break: break-all;
+}
+
+.preview-title {
+    font-size: 0.85em;
+    color: #666;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+html.dark-mode .preview-title {
+    color: #aaa;
+}
+
+.preview-close {
+    background: transparent;
+    border: none;
+    font-size: 1.4em;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+    padding: 0 6px;
+}
+
+.preview-close:hover {
+    color: #c0392b;
+}
+
+.preview-player-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: #000;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.preview-player-wrapper iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.preview-action-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.88em;
+    border-radius: 4px;
+    border: 1px solid var(--stream-item-shadow, rgba(0,0,0,0.15));
+    background-color: transparent;
+    color: inherit;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.preview-action-btn.fav:hover {
+    background-color: #fff5d6;
+    border-color: #f1c40f;
+}
+
+.preview-action-btn.exclude:hover {
+    background-color: #fde0e0;
+    border-color: #e74c3c;
+    color: #c0392b;
+}
+
+.preview-action-btn.open {
+    background-color: #9147ff;
+    color: #fff;
+    border-color: #9147ff;
+}
+
+.preview-action-btn.open:hover {
+    background-color: #772ce8;
+    border-color: #772ce8;
+}
+
+html.dark-mode .preview-action-btn.fav:hover {
+    background-color: #4a3d10;
+    color: #ffd966;
+}
+
+html.dark-mode .preview-action-btn.exclude:hover {
+    background-color: #4a1f1f;
+    color: #ff8a80;
+}
+
+/* Highlight the card currently being previewed */
+.stream-item.previewing {
+    outline: 2px solid #9147ff;
+    outline-offset: -2px;
+}
+
+.stream-actions .preview-btn {
+    margin-top: 4px;
+    padding: 4px 10px;
+    font-size: 0.85em;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid #9147ff;
+    background-color: #9147ff;
+    color: #fff;
+}
+
+.stream-actions .preview-btn:hover {
+    background-color: #772ce8;
+    border-color: #772ce8;
+}
+
+/* Responsive: stack on narrow viewports */
+@media (max-width: 900px) {
+    .results-with-preview {
+        flex-direction: column;
+    }
+
+    .preview-panel {
+        flex: 0 0 auto;
+        width: 100%;
+        position: sticky;
+        top: 0;
+        max-height: 70vh;
+        z-index: 10;
+    }
+}
