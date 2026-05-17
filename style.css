@@ -800,12 +800,13 @@ html.dark-mode .stream-actions .exclude-btn:hover {
 }
 
 .results-main {
-    flex: 1;
+    flex: 1 1 38%;
     min-width: 0;
 }
 
 .preview-panel {
-    flex: 0 0 380px;
+    flex: 1 1 62%;
+    min-width: 0;
     position: sticky;
     top: 12px;
     max-height: calc(100vh - 24px);
@@ -953,20 +954,18 @@ html.dark-mode .preview-action-btn.exclude:hover {
     outline-offset: -2px;
 }
 
-.stream-actions .preview-btn {
-    margin-top: 4px;
-    padding: 4px 10px;
-    font-size: 0.85em;
+/* Whole card clickable for preview */
+.stream-item {
     cursor: pointer;
-    border-radius: 4px;
-    border: 1px solid #9147ff;
-    background-color: #9147ff;
-    color: #fff;
+    transition: box-shadow 0.15s, transform 0.05s;
 }
 
-.stream-actions .preview-btn:hover {
-    background-color: #772ce8;
-    border-color: #772ce8;
+.stream-item:hover {
+    box-shadow: 0 4px 10px var(--stream-item-shadow, rgba(0,0,0,0.15));
+}
+
+.stream-item:active {
+    transform: scale(0.998);
 }
 
 /* Responsive: stack on narrow viewports */
