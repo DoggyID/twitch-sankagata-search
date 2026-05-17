@@ -817,7 +817,6 @@ function renderStreamList(targetDiv, streams, opts = {}) {
                     <p>視聴者数: <strong>${stream.viewer_count.toLocaleString()}</strong> 人${visited ? ' <span class="visited-badge">視聴済</span>' : ''}</p>
                 </div>
                 <div class="stream-actions">
-                    <button type="button" class="preview-btn">▶ プレビュー</button>
                     <button type="button" class="toggle-fav-btn">${favBtnLabel}</button>
                     <button type="button" class="exclude-btn">🚫 除外</button>
                     <button type="button" class="mark-visited-btn">既視聴にする</button>
@@ -863,10 +862,11 @@ function renderStreamList(targetDiv, streams, opts = {}) {
             });
         }
 
-        const previewBtn = item.querySelector('.preview-btn');
-        if (previewBtn) {
-            previewBtn.addEventListener('click', () => openPreview(stream));
-        }
+        // Clicking the card (anywhere except links/buttons) opens preview
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('a, button')) return;
+            openPreview(stream);
+        });
     });
 
     // Restore previewing highlight if applicable
