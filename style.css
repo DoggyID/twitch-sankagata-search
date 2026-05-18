@@ -927,6 +927,16 @@ html.dark-mode .preview-title {
     color: #c0392b;
 }
 
+.preview-action-btn.visited:hover {
+    background-color: #e8e8ec;
+    border-color: #888;
+}
+
+html.dark-mode .preview-action-btn.visited:hover {
+    background-color: #3a3a3e;
+    border-color: #aaa;
+}
+
 .preview-action-btn.open {
     background-color: #9147ff;
     color: #fff;
