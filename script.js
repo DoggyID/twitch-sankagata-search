@@ -22,6 +22,7 @@ const previewStreamerUI = document.getElementById('previewStreamer');
 const previewTitleUI = document.getElementById('previewTitle');
 const previewFavBtn = document.getElementById('previewFavBtn');
 const previewExcludeBtn = document.getElementById('previewExcludeBtn');
+const previewVisitedBtn = document.getElementById('previewVisitedBtn');
 const previewCloseBtn = document.getElementById('previewCloseBtn');
 const previewOpenLink = document.getElementById('previewOpenLink');
 const gameIdInput = document.getElementById('gameIdInput');
@@ -432,6 +433,14 @@ function setupPreview() {
             closePreview();
         });
     }
+    if (previewVisitedBtn) {
+        previewVisitedBtn.addEventListener('click', () => {
+            if (!currentPreviewStream) return;
+            handleStreamClick(currentPreviewStream);
+            if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
+            closePreview();
+        });
+    }
 }
 
 // --- Tabs ---
@@ -799,8 +808,6 @@ function renderStreamList(targetDiv, streams, opts = {}) {
     let htmlContent = '<ul class="stream-list">';
     streams.forEach(stream => {
         const thumbnailUrl = stream.thumbnail_url.replace('{width}', '640').replace('{height}', '360');
-        const login = normalizeLogin(stream.user_login);
-        const favBtnLabel = isFavorite(login) ? '★ お気に入り解除' : '☆ お気に入り';
         const visited = visitedStreams.some(v => v.user_login === stream.user_login);
 
         htmlContent += `
@@ -809,17 +816,12 @@ function renderStreamList(targetDiv, streams, opts = {}) {
                     <img src="${thumbnailUrl}" alt="${stream.user_name} の配信サムネイル" class="thumbnail">
                 </div>
                 <div class="stream-info">
-                    <h3><a href="https://twitch.tv/${stream.user_login}" target="_blank" rel="noopener noreferrer">${stream.title || '(タイトルなし)'}</a></h3>
+                    <h3 class="stream-title">${stream.title || '(タイトルなし)'}</h3>
                     <p>
                         <img src="${stream.profile_image_url || placeholderPfp}" alt="" class="streamer-pfp">
                         配信者: <strong>${stream.user_name} (${stream.user_login})</strong>
                     </p>
                     <p>視聴者数: <strong>${stream.viewer_count.toLocaleString()}</strong> 人${visited ? ' <span class="visited-badge">視聴済</span>' : ''}</p>
-                </div>
-                <div class="stream-actions">
-                    <button type="button" class="toggle-fav-btn">${favBtnLabel}</button>
-                    <button type="button" class="exclude-btn">🚫 除外</button>
-                    <button type="button" class="mark-visited-btn">既視聴にする</button>
                 </div>
             </li>
         `;
@@ -829,44 +831,9 @@ function renderStreamList(targetDiv, streams, opts = {}) {
 
     const streamMap = new Map(streams.map(s => [s.user_login, s]));
     targetDiv.querySelectorAll('.stream-item').forEach(item => {
-        const userLogin = item.dataset.user;
-        const stream = streamMap.get(userLogin);
+        const stream = streamMap.get(item.dataset.user);
         if (!stream) return;
-
-        item.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => handleStreamClick(stream));
-        });
-
-        const markVisitedBtn = item.querySelector('.mark-visited-btn');
-        if (markVisitedBtn) {
-            markVisitedBtn.addEventListener('click', () => handleStreamClick(stream));
-        }
-
-        const favBtn = item.querySelector('.toggle-fav-btn');
-        if (favBtn) {
-            favBtn.addEventListener('click', () => {
-                if (isFavorite(stream.user_login)) removeFavorite(stream.user_login);
-                else addFavorite(stream.user_login);
-                renderChannelLists();
-                if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
-            });
-        }
-
-        const excludeBtn = item.querySelector('.exclude-btn');
-        if (excludeBtn) {
-            excludeBtn.addEventListener('click', () => {
-                if (!confirm(`「${stream.user_name}」を検索除外に追加しますか？`)) return;
-                addExcluded(stream.user_login);
-                renderChannelLists();
-                if (currentFilteredStreams.length > 0) renderResults(currentFilteredStreams);
-            });
-        }
-
-        // Clicking the card (anywhere except links/buttons) opens preview
-        item.addEventListener('click', (e) => {
-            if (e.target.closest('a, button')) return;
-            openPreview(stream);
-        });
+        item.addEventListener('click', () => openPreview(stream));
     });
 
     // Restore previewing highlight if applicable
