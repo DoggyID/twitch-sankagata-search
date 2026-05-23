@@ -142,10 +142,9 @@ button:hover {
 }
 
 .stream-item {
-    display: grid;
-    /* Fixed width for thumbnail (240px), Flex text, Auto width for actions */
-    grid-template-columns: 240px 1fr auto;
-    gap: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     background-color: var(--stream-item-bg);
     border: 1px solid var(--border-color-light);
     border-radius: 4px;
@@ -153,8 +152,6 @@ button:hover {
     margin-bottom: 15px;
     box-shadow: 0 2px 4px var(--stream-item-shadow);
     transition: background-color 0.3s, border-color 0.3s;
-    /* Align items to start */
-    align-items: start;
 }
 
 .stream-actions {
@@ -168,7 +165,6 @@ button:hover {
 
 .thumbnail-wrapper {
     width: 100%;
-    /* Fills the 240px column */
     aspect-ratio: 16 / 9;
     position: relative;
     overflow: hidden;
@@ -188,9 +184,7 @@ button:hover {
 .stream-info {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     min-width: 0;
-    /* Prevent flex child from overflowing */
 }
 
 .button-group {
@@ -628,6 +622,29 @@ details.visited-accordion summary:hover {
 html.dark-mode .visited-badge {
     background-color: #46464a;
     color: #ccc;
+}
+
+.stream-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+}
+
+.stream-tag {
+    display: inline-block;
+    background-color: var(--border-color-light);
+    color: var(--stream-info-color);
+    font-size: 0.75em;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+html.dark-mode .stream-tag {
+    background-color: #39393d;
+    color: #c0c0c0;
+    border-color: #46464a;
 }
 
 /* --- Result Tabs --- */
