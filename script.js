@@ -822,6 +822,7 @@ function renderStreamList(targetDiv, streams, opts = {}) {
                         配信者: <strong>${stream.user_name} (${stream.user_login})</strong>
                     </p>
                     <p>視聴者数: <strong>${stream.viewer_count.toLocaleString()}</strong> 人${visited ? ' <span class="visited-badge">視聴済</span>' : ''}</p>
+                    ${stream.tags && stream.tags.length > 0 ? `<div class="stream-tags">${stream.tags.map(tag => `<span class="stream-tag">${tag}</span>`).join('')}</div>` : ''}
                 </div>
             </li>
         `;
