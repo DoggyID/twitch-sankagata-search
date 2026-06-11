@@ -365,6 +365,7 @@ input:checked + .slider:before { transform: translateX(24px); }
   display: flex; flex-direction: column;
   touch-action: none; user-select: none;
 }
+.zap-overlay:focus { outline: none; }
 .zap-topbar {
   display: flex; align-items: center; gap: var(--space-3);
   padding: var(--space-2) var(--space-4); background: rgba(0,0,0,0.4); flex: 0 0 auto;

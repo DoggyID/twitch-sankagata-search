@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PLAYER_PARENT } from '../../config.js';
 import { useZapControls } from './useZapControls.js';
 
@@ -65,8 +65,20 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
 
   const playerSrc = useMemo(() => {
     if (!stream) return '';
-    return `https://player.twitch.tv/?channel=${encodeURIComponent(stream.user_login)}&parent=${encodeURIComponent(PLAYER_PARENT)}&muted=true&autoplay=true`;
+    return `https://player.twitch.tv/?channel=${encodeURIComponent(stream.user_login)}&parent=${encodeURIComponent(PLAYER_PARENT)}&muted=false&autoplay=true`;
   }, [stream]);
+
+  // クロスオリジンの iframe にフォーカスが奪われると親のキー操作が効かなくなる。
+  // iframe 外にマウスが動いたらフォーカスを親へ取り戻し、矢印キー操作を復帰させる
+  const rootRef = useRef(null);
+  useEffect(() => {
+    rootRef.current?.focus({ preventScroll: true });
+  }, []);
+  const reclaimFocus = useCallback(() => {
+    if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
+      rootRef.current?.focus({ preventScroll: true });
+    }
+  }, []);
 
   const chatSrc = useMemo(() => {
     if (!stream) return '';
@@ -76,8 +88,12 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
   return (
     <div
       className={`zap-overlay${showChat ? ' with-chat' : ''}`}
+      ref={rootRef}
+      tabIndex={-1}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
+      onMouseMove={reclaimFocus}
+      onMouseDown={reclaimFocus}
     >
       <div className="zap-topbar">
         <span className="zap-brand">DPGK</span>
@@ -154,6 +170,7 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
 
       <div className="zap-hint">
         ↑↓ 前後 ・ → お気に入り ・ ← 既視聴 ・ Delete 除外 ・ Esc 閉じる（スワイプ上下でも操作可）
+        <br />※ プレイヤーをクリックした後は、動画の外にマウスを動かすとキー操作が復帰します
       </div>
     </div>
   );
