@@ -1,0 +1,92 @@
+/* =========================================================
+   Twitch風 デザインシステム（カラー / スペーシング / 角丸 / 影）
+   ========================================================= */
+:root {
+  /* Brand (Twitch) */
+  --twitch-purple: #9146ff;
+  --twitch-purple-hover: #772ce8;
+  --twitch-purple-soft: rgba(145, 70, 255, 0.12);
+  --live-red: #eb0400;
+
+  /* Light theme surfaces */
+  --bg-color: #f7f7f8;
+  --text-color: #18181b;
+  --text-muted: #53535f;
+  --container-bg: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f2f2f4;
+  --surface-3: #e9e9ec;
+  --border-color: #e0e0e3;
+  --border-color-light: #ececef;
+
+  /* Stream cards */
+  --stream-item-bg: #ffffff;
+  --stream-title-color: #18181b;
+  --stream-info-color: #53535f;
+  --stream-info-strong: #0e0e10;
+
+  /* Inputs */
+  --input-bg: #ffffff;
+  --input-border: #d3d3d8;
+  --input-focus: var(--twitch-purple);
+
+  /* Misc surfaces */
+  --instructions-bg: #efeff1;
+  --game-id-result-bg: #f2f2f4;
+
+  /* Segmented control */
+  --segment-border: var(--twitch-purple);
+  --segment-bg: #ffffff;
+  --segment-color: var(--twitch-purple);
+  --segment-hover-bg: var(--twitch-purple-soft);
+  --segment-active-bg: var(--twitch-purple);
+  --segment-active-color: #ffffff;
+
+  /* Scales */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.18);
+  --transition: 0.18s ease;
+
+  --font-sans: 'Inter', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+html.dark-mode {
+  --bg-color: #0e0e10;
+  --text-color: #efeff1;
+  --text-muted: #adadb8;
+  --container-bg: #18181b;
+  --surface-1: #1f1f23;
+  --surface-2: #26262c;
+  --surface-3: #2f2f35;
+  --border-color: #2a2a2d;
+  --border-color-light: #303035;
+
+  --stream-item-bg: #1f1f23;
+  --stream-title-color: #efeff1;
+  --stream-info-color: #adadb8;
+  --stream-info-strong: #ffffff;
+
+  --input-bg: #26262c;
+  --input-border: #3a3a40;
+
+  --instructions-bg: #1f1f23;
+  --game-id-result-bg: #1f1f23;
+
+  --segment-bg: #1f1f23;
+  --segment-hover-bg: #2f2f35;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
