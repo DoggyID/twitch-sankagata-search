@@ -2,9 +2,9 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { PLAYER_PARENT } from '../../config.js';
 import { useZapControls } from './useZapControls.js';
 
-// TikTok風ザッピングモード（本体には手を付けず、独立した全画面オーバーレイ）
+// DPGKモード（TikTok風ザッピング）。本体には手を付けず、独立した全画面オーバーレイ
 export default function ZapMode({ favList, othersList, channels, visited, onClose }) {
-  // 開いた時点のリストをスナップショット（ザッピング中の増減で index がずれないように）
+  // 開いた時点のリストをスナップショット（操作中の増減で index がずれないように）
   const snapshot = useRef({
     favorites: favList,
     others: othersList,
@@ -14,6 +14,7 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
   const [source, setSource] = useState(initialSource);
   const [index, setIndex] = useState(0);
   const [flash, setFlash] = useState(null); // 操作フィードバック
+  const [showChat, setShowChat] = useState(true);
 
   const list = snapshot.current[source] || [];
   const stream = list[index] || null;
@@ -67,9 +68,19 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
     return `https://player.twitch.tv/?channel=${encodeURIComponent(stream.user_login)}&parent=${encodeURIComponent(PLAYER_PARENT)}&muted=true&autoplay=true`;
   }, [stream]);
 
+  const chatSrc = useMemo(() => {
+    if (!stream) return '';
+    return `https://www.twitch.tv/embed/${encodeURIComponent(stream.user_login)}/chat?parent=${encodeURIComponent(PLAYER_PARENT)}&darkpopout`;
+  }, [stream]);
+
   return (
-    <div className="zap-overlay" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div
+      className={`zap-overlay${showChat ? ' with-chat' : ''}`}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       <div className="zap-topbar">
+        <span className="zap-brand">DPGK</span>
         <div className="zap-source-toggle">
           <button
             type="button"
@@ -87,27 +98,42 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
           </button>
         </div>
         <div className="zap-counter">{list.length > 0 ? `${index + 1} / ${list.length}` : '0 / 0'}</div>
+        <button
+          type="button"
+          className={`zap-chat-toggle${showChat ? ' active' : ''}`}
+          onClick={() => setShowChat((v) => !v)}
+          title="チャットの表示/非表示"
+        >
+          💬 チャット
+        </button>
         <button type="button" className="zap-close" aria-label="閉じる" onClick={onClose}>×</button>
       </div>
 
-      <div className="zap-stage">
+      <div className="zap-body">
         {stream ? (
           <>
-            <div className="zap-player">
-              <iframe
-                key={stream.user_login}
-                src={playerSrc}
-                allowFullScreen
-                allow="autoplay; encrypted-media"
-                title="Twitch zap player"
-              />
+            <div className="zap-main">
+              <div className="zap-player">
+                <iframe
+                  key={stream.user_login}
+                  src={playerSrc}
+                  allowFullScreen
+                  allow="autoplay; encrypted-media"
+                  title="Twitch DPGK player"
+                />
+                {flash && <div className="zap-flash">{flash}</div>}
+              </div>
+              <div className="zap-meta">
+                <strong className="zap-streamer">{stream.user_name}</strong>
+                <span className="zap-title">{stream.title || '(タイトルなし)'}</span>
+                <span className="zap-viewers">👁 {stream.viewer_count.toLocaleString()} 人</span>
+              </div>
             </div>
-            <div className="zap-meta">
-              <strong className="zap-streamer">{stream.user_name}</strong>
-              <span className="zap-title">{stream.title || '(タイトルなし)'}</span>
-              <span className="zap-viewers">👁 {stream.viewer_count.toLocaleString()} 人</span>
-            </div>
-            {flash && <div className="zap-flash">{flash}</div>}
+            {showChat && (
+              <div className="zap-chat">
+                <iframe key={`chat-${stream.user_login}`} src={chatSrc} title="Twitch chat" />
+              </div>
+            )}
           </>
         ) : (
           <div className="zap-empty">

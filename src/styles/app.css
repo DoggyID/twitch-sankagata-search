@@ -367,7 +367,12 @@ input:checked + .slider:before { transform: translateX(24px); }
 }
 .zap-topbar {
   display: flex; align-items: center; gap: var(--space-3);
-  padding: var(--space-3) var(--space-4); background: rgba(0,0,0,0.4);
+  padding: var(--space-2) var(--space-4); background: rgba(0,0,0,0.4); flex: 0 0 auto;
+}
+.zap-brand {
+  font-weight: 800; letter-spacing: 0.08em; font-size: 1rem;
+  background: linear-gradient(135deg, #9146ff, #00f0ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .zap-source-toggle {
   display: flex; gap: var(--space-2); background: rgba(255,255,255,0.08);
@@ -380,27 +385,51 @@ input:checked + .slider:before { transform: translateX(24px); }
 .zap-source-btn:hover { background: rgba(255,255,255,0.08); }
 .zap-source-btn.active { background: var(--twitch-purple); color: #fff; }
 .zap-counter { margin-left: auto; font-variant-numeric: tabular-nums; color: #adadb8; font-weight: 600; }
+.zap-chat-toggle {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
+  color: #adadb8; font-weight: 600; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.82rem;
+}
+.zap-chat-toggle:hover { background: rgba(255,255,255,0.14); }
+.zap-chat-toggle.active { color: #fff; border-color: var(--twitch-purple); background: var(--twitch-purple-soft); }
 .zap-close {
   background: transparent; border: none; color: #fff; font-size: 1.6rem;
   line-height: 1; cursor: pointer; padding: 0 8px;
 }
 .zap-close:hover { background: transparent; color: #ff6b81; }
 
-.zap-stage { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-3); min-height: 0; }
+/* 本体: 動画(zap-main) + チャット(zap-chat)。横長は右、縦長は下に配置 */
+.zap-body { flex: 1; display: flex; min-height: 0; min-width: 0; }
+.zap-main {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; padding: var(--space-2) var(--space-3);
+}
 .zap-player {
-  position: relative; width: 100%; max-width: min(90vw, 1100px);
-  aspect-ratio: 16 / 9; max-height: 70vh; background: #000;
-  border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg);
+  position: relative; flex: 1; min-height: 0; width: 100%;
+  background: #000; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg);
 }
 .zap-player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .zap-meta {
-  width: 100%; max-width: min(90vw, 1100px); margin-top: var(--space-3);
+  flex: 0 0 auto; margin-top: var(--space-2);
   display: flex; flex-direction: column; gap: 2px;
 }
-.zap-streamer { font-size: 1.1rem; }
+.zap-streamer { font-size: 1.05rem; }
 .zap-title { color: #adadb8; font-size: 0.9rem; }
 .zap-viewers { color: #adadb8; font-size: 0.85rem; }
-.zap-empty { text-align: center; color: #adadb8; }
+.zap-empty { margin: auto; text-align: center; color: #adadb8; }
+
+.zap-chat { background: #18181b; min-width: 0; min-height: 0; }
+.zap-chat iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+/* 横長ウィンドウ: チャットを右に */
+@media (min-aspect-ratio: 1/1) {
+  .zap-body { flex-direction: row; }
+  .zap-chat { flex: 0 0 clamp(300px, 22vw, 400px); height: 100%; border-left: 1px solid #2a2a2d; }
+}
+/* 縦長ウィンドウ: チャットを下に */
+@media (max-aspect-ratio: 1/1) {
+  .zap-body { flex-direction: column; }
+  .zap-chat { flex: 0 0 34vh; width: 100%; border-top: 1px solid #2a2a2d; }
+}
 
 .zap-flash {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);

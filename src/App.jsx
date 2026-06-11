@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Header from './components/Header.jsx';
 import AuthSection from './components/AuthSection.jsx';
 import SearchFilters from './components/SearchFilters.jsx';
@@ -33,6 +33,16 @@ export default function App() {
   const [zapOpen, setZapOpen] = useState(false);
 
   const authed = !!token || demoMode;
+
+  // 並び替え順を変更したら、その場で表示中の配信を並べ直す（検索を待たない）
+  const firstSortRun = useRef(true);
+  useEffect(() => {
+    if (firstSortRun.current) {
+      firstSortRun.current = false;
+      return;
+    }
+    setStreams((prev) => (prev.length > 0 ? sortStreams(prev, settings.sortOrder) : prev));
+  }, [settings.sortOrder]);
 
   // 表示名キャッシュ（チャンネル管理の表示用）
   const nameCache = useMemo(() => {

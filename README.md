@@ -1,7 +1,7 @@
 # twitch-sankagata-search
 
 Twitch のライブ配信を、ゲーム名・タグ・タイトル・視聴者数などで絞り込んで検索できる Web アプリ。
-お気に入り / 除外 / 既視聴の管理、サイドプレビュー、そして **TikTok風ザッピングモード** を備えています。
+お気に入り / 除外 / 既視聴の管理、サイドプレビュー、そして **DPGKモード（TikTok風ザッピング）** を備えています。
 
 React + Vite 製で、GitHub Pages にデプロイされます。
 
@@ -69,9 +69,10 @@ npm run preview   # ビルド結果をローカル確認
 - 配信カードをクリックで右側（モバイルは下）にプレビュー再生
 - お気に入り ⭐ / 除外 🚫 / 既視聴の管理
 
-### ザッピングモード ⚡（カオスモード 😺 の隣）
+### DPGKモード ⚡（カオスモード 😺 の隣）
 
-1配信ずつ全画面表示し、高速に切り替えられます。
+1配信ずつ全画面表示し、高速に切り替えられます。動画はウィンドウ幅いっぱいに表示し、
+チャット欄を横長画面では右・縦長画面では下に配置します（💬ボタンで表示/非表示）。
 
 | 操作 | キーボード | タッチ |
 | --- | --- | --- |
@@ -93,7 +94,7 @@ src/
 ├── api/twitch.js             Twitch Helix API
 ├── hooks/                    auth / channels / visited / settings / theme
 ├── components/               Header, SearchFilters, Results, PreviewPanel, ...
-│   └── ZapMode/              ザッピングモード
+│   └── ZapMode/              DPGKモード（ザッピング）
 ├── mock/mockStreams.js       デモモード用データ
 └── styles/                   theme.css（Twitch風デザインシステム）+ app.css
 ```

@@ -110,7 +110,7 @@ export default function SearchFilters({ settings, onChange, onSearch, onReset, o
           リセット
         </button>
         <button className="chaos-button" onClick={onChaos} title="カオスモード">😺</button>
-        <button className="zap-button" onClick={onZap} title="ザッピングモード">⚡</button>
+        <button className="zap-button" onClick={onZap} title="DPGKモード">⚡</button>
       </div>
     </>
   );
