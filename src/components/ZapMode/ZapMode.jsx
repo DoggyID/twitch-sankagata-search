@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { PLAYER_PARENT } from '../../config.js';
 import { useZapControls } from './useZapControls.js';
+import { useTwitchPlayer } from './useTwitchPlayer.js';
 
 // DPGKモード（TikTok風ザッピング）。本体には手を付けず、独立した全画面オーバーレイ
 export default function ZapMode({ favList, othersList, channels, visited, onClose }) {
@@ -63,21 +64,19 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
     onPrev: prev, onNext: next, onFavorite, onVisited, onExclude, onClose,
   });
 
-  const playerSrc = useMemo(() => {
-    if (!stream) return '';
-    return `https://player.twitch.tv/?channel=${encodeURIComponent(stream.user_login)}&parent=${encodeURIComponent(PLAYER_PARENT)}&muted=false&autoplay=true`;
-  }, [stream]);
+  // プレイヤーは JS API で生成（素の iframe だとフォーカスを奪われ矢印キーが効かなくなる）。
+  // 上に透明オーバーレイを被せて iframe にフォーカスを渡さず、ミュート等は自前ボタンで操作する。
+  const playerId = useId().replace(/:/g, '');
+  const { muted, toggleMute } = useTwitchPlayer(playerId, stream?.user_login);
 
-  // クロスオリジンの iframe にフォーカスが奪われると親のキー操作が効かなくなる。
-  // iframe 外にマウスが動いたらフォーカスを親へ取り戻し、矢印キー操作を復帰させる
+  const onToggleMute = useCallback(() => {
+    const m = toggleMute();
+    showFlash(m ? '🔇 ミュート' : '🔊 ミュート解除');
+  }, [toggleMute, showFlash]);
+
   const rootRef = useRef(null);
   useEffect(() => {
     rootRef.current?.focus({ preventScroll: true });
-  }, []);
-  const reclaimFocus = useCallback(() => {
-    if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
-      rootRef.current?.focus({ preventScroll: true });
-    }
   }, []);
 
   const chatSrc = useMemo(() => {
@@ -92,8 +91,6 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
       tabIndex={-1}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      onMouseMove={reclaimFocus}
-      onMouseDown={reclaimFocus}
     >
       <div className="zap-topbar">
         <span className="zap-brand">DPGK</span>
@@ -116,12 +113,31 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
         <div className="zap-counter">{list.length > 0 ? `${index + 1} / ${list.length}` : '0 / 0'}</div>
         <button
           type="button"
+          className="zap-chat-toggle"
+          onClick={onToggleMute}
+          title="音声のミュート切替"
+        >
+          {muted ? '🔇 ミュート中' : '🔊 音声オン'}
+        </button>
+        <button
+          type="button"
           className={`zap-chat-toggle${showChat ? ' active' : ''}`}
           onClick={() => setShowChat((v) => !v)}
           title="チャットの表示/非表示"
         >
           💬 チャット
         </button>
+        {stream && (
+          <a
+            className="zap-open-twitch"
+            href={`https://twitch.tv/${stream.user_login}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="この配信をTwitchで開く"
+          >
+            Twitchで開く ↗
+          </a>
+        )}
         <button type="button" className="zap-close" aria-label="閉じる" onClick={onClose}>×</button>
       </div>
 
@@ -130,19 +146,29 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
           <>
             <div className="zap-main">
               <div className="zap-player">
-                <iframe
-                  key={stream.user_login}
-                  src={playerSrc}
-                  allowFullScreen
-                  allow="autoplay; encrypted-media"
-                  title="Twitch DPGK player"
+                <div id={playerId} className="zap-player-embed" />
+                {/* iframe にフォーカスを渡さないための透明オーバーレイ。タップでミュート切替 */}
+                <button
+                  type="button"
+                  className="zap-player-overlay"
+                  onClick={onToggleMute}
+                  aria-label={muted ? 'ミュート解除' : 'ミュート'}
+                  title="タップでミュート切替"
                 />
+                {muted && <div className="zap-mute-indicator">🔇</div>}
                 {flash && <div className="zap-flash">{flash}</div>}
               </div>
               <div className="zap-meta">
                 <strong className="zap-streamer">{stream.user_name}</strong>
                 <span className="zap-title">{stream.title || '(タイトルなし)'}</span>
                 <span className="zap-viewers">👁 {stream.viewer_count.toLocaleString()} 人</span>
+                {stream.tags && stream.tags.length > 0 && (
+                  <div className="zap-tags">
+                    {stream.tags.map((tag) => (
+                      <span key={tag} className="zap-tag">{tag}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             {showChat && (
@@ -162,15 +188,14 @@ export default function ZapMode({ favList, othersList, channels, visited, onClos
       {/* 画面操作ボタン（タッチ/マウス用）。キーボードでも同じ操作が可能 */}
       <div className="zap-controls">
         <button type="button" className="zap-ctrl prev" onClick={prev} title="前へ (↑)">↑ 前へ</button>
+        <button type="button" className="zap-ctrl next" onClick={next} title="次へ (↓)">↓ 次へ</button>
+        <button type="button" className="zap-ctrl fav" onClick={onFavorite} title="お気に入り (→)">お気に入り →</button>
         <button type="button" className="zap-ctrl visited" onClick={onVisited} title="既視聴 (←)">← 既視聴</button>
         <button type="button" className="zap-ctrl exclude" onClick={onExclude} title="除外 (Delete)">🚫 除外</button>
-        <button type="button" className="zap-ctrl fav" onClick={onFavorite} title="お気に入り (→)">お気に入り →</button>
-        <button type="button" className="zap-ctrl next" onClick={next} title="次へ (↓)">↓ 次へ</button>
       </div>
 
       <div className="zap-hint">
-        ↑↓ 前後 ・ → お気に入り ・ ← 既視聴 ・ Delete 除外 ・ Esc 閉じる（スワイプ上下でも操作可）
-        <br />※ プレイヤーをクリックした後は、動画の外にマウスを動かすとキー操作が復帰します
+        ↑ 前へ ・ ↓ 次へ ・ → お気に入り ・ ← 既視聴 ・ Delete 除外 ・ Esc 閉じる（スワイプ上下でも操作可）
       </div>
     </div>
   );
