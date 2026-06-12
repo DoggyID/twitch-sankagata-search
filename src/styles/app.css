@@ -416,15 +416,21 @@ input:checked + .slider:before { transform: translateX(24px); }
 }
 .zap-player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .zap-player-embed { position: absolute; inset: 0; }
-/* iframe にキーボードフォーカスを渡さないための透明オーバーレイ（タップでミュート切替） */
+/* iframe にキーボードフォーカスを渡さないための透明オーバーレイ（タップでミュート切替）。
+   div で実装（button にすると global の button:hover が紫背景を付けてしまうため） */
 .zap-player-overlay {
   position: absolute; inset: 0; z-index: 5;
-  background: transparent; border: 0; padding: 0; cursor: pointer;
+  background: transparent; cursor: pointer;
 }
 .zap-mute-indicator {
   position: absolute; left: 12px; bottom: 12px; z-index: 6; pointer-events: none;
   background: rgba(0,0,0,0.6); color: #fff; font-size: 1rem;
   padding: 4px 8px; border-radius: var(--radius-sm);
+}
+.zap-pause-indicator {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 6; pointer-events: none; font-size: 3rem; color: rgba(255,255,255,0.85);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.7);
 }
 .zap-meta {
   flex: 0 0 auto; margin-top: var(--space-2);
@@ -480,8 +486,34 @@ input:checked + .slider:before { transform: translateX(24px); }
 .zap-ctrl.visited:hover { background: rgba(255,255,255,0.14); }
 .zap-ctrl.exclude { border-color: #e0526b; color: #ff8a9b; }
 .zap-ctrl.exclude:hover { background: rgba(224,82,107,0.18); }
+.zap-ctrl.mute:hover { background: rgba(255,255,255,0.14); }
+/* 操作行内の「Twitchで開く」リンク（button ではなく a なので個別指定） */
+.zap-ctrl.open-twitch {
+  display: inline-flex; align-items: center; text-decoration: none;
+  background: var(--twitch-purple); border-color: var(--twitch-purple); color: #fff;
+}
+.zap-ctrl.open-twitch:hover { filter: brightness(1.12); background: var(--twitch-purple); }
 
 .zap-hint { text-align: center; color: #7a7a85; font-size: 0.78rem; padding: 0 var(--space-3) var(--space-3); }
+
+/* DPGKページの検索パネル（topbar の 🔍検索 で開閉） */
+.zap-search-panel {
+  background: var(--surface-1, #18181b); border-bottom: 1px solid #2a2a2d;
+  padding: var(--space-3) var(--space-4); max-height: 60vh; overflow-y: auto;
+}
+.zap-search-status { margin-top: var(--space-2); color: #adadb8; font-size: 0.85rem; }
+
+/* 未認証時のゲート画面 */
+.zap-gate { align-items: center; justify-content: center; }
+.zap-gate-box {
+  max-width: 460px; margin: auto; text-align: center; color: #efeff1;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-md); padding: var(--space-6) var(--space-5);
+  display: flex; flex-direction: column; gap: var(--space-3);
+}
+.zap-gate-box p { color: #adadb8; margin: 0; }
+.zap-gate-actions { display: flex; gap: var(--space-3); justify-content: center; margin-top: var(--space-2); }
+.zap-gate-actions a { text-decoration: none; }
 
 @media (max-width: 640px) {
   .zap-ctrl { flex: 1 1 40%; }

@@ -1,0 +1,330 @@
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useAuth } from '../../hooks/useAuth.js';
+import { useChannels, normalizeLogin } from '../../hooks/useChannels.js';
+import { useVisited } from '../../hooks/useVisited.js';
+import { useSettings } from '../../hooks/useSettings.js';
+import { useStreamSearch } from '../../hooks/useStreamSearch.js';
+import { sortStreams } from '../../api/twitch.js';
+import { MOCK_STREAMS } from '../../mock/mockStreams.js';
+import { PLAYER_PARENT } from '../../config.js';
+import { homeUrl } from '../../dpgkNav.js';
+import SearchFilters from '../SearchFilters.jsx';
+import { useZapControls } from './useZapControls.js';
+import { useTwitchPlayer } from './useTwitchPlayer.js';
+
+const DEMO_PARAM = new URLSearchParams(window.location.search).get('demo') === '1';
+
+// DPGKモード専用ページ（dpgk.html）。本体の検索画面とは独立して読み込まれ、
+// このページ単体で検索〜ザッピングまで完結する。お気に入り/除外/既視聴は
+// localStorage 経由で本体と共有され、操作は即座にフィードへ反映される。
+export default function DpgkApp() {
+  const { token } = useAuth();
+  const channels = useChannels();
+  const visited = useVisited();
+  const [settings, updateSettings] = useSettings();
+  const [demoMode] = useState(DEMO_PARAM);
+  const search = useStreamSearch(DEMO_PARAM ? sortStreams(MOCK_STREAMS, 'desc') : []);
+
+  const [source, setSource] = useState('others');
+  const [index, setIndex] = useState(0);
+  const [flash, setFlash] = useState(null);
+  const [showChat, setShowChat] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+
+  const authed = !!token || demoMode;
+
+  // --- ライブフィード（streams × お気に入り/除外/既視聴 を都度算出） ---
+  // 既視聴・除外は常に除外。これにより前へ戻っても既視聴済みは出てこない。
+  const feed = useMemo(() => {
+    const out = [];
+    search.streams.forEach((s) => {
+      const login = normalizeLogin(s.user_login);
+      if (channels.isExcluded(login)) return;
+      if (visited.isVisited(s.user_login)) return;
+      const fav = channels.isFavorite(login);
+      if (source === 'favorites' ? fav : !fav) out.push(s);
+    });
+    return out;
+  }, [search.streams, channels.favorites, channels.excluded, visited.visited, source]);
+
+  const counts = useMemo(() => {
+    let fav = 0;
+    let others = 0;
+    search.streams.forEach((s) => {
+      const login = normalizeLogin(s.user_login);
+      if (channels.isExcluded(login) || visited.isVisited(s.user_login)) return;
+      if (channels.isFavorite(login)) fav += 1;
+      else others += 1;
+    });
+    return { fav, others };
+  }, [search.streams, channels.favorites, channels.excluded, visited.visited]);
+
+  const current = feed[index] || null;
+
+  // フィードが縮んで index がはみ出したら詰める（末尾を操作した時など）
+  useEffect(() => {
+    if (feed.length === 0) {
+      if (index !== 0) setIndex(0);
+    } else if (index >= feed.length) {
+      setIndex(feed.length - 1);
+    }
+  }, [feed.length, index]);
+
+  const showFlash = useCallback((msg) => {
+    setFlash(msg);
+    window.clearTimeout(showFlash._t);
+    showFlash._t = window.setTimeout(() => setFlash(null), 700);
+  }, []);
+
+  // --- プレイヤー ---
+  const playerId = useId().replace(/:/g, '');
+  const { muted, toggleMute, paused, togglePlay } = useTwitchPlayer(playerId, current?.user_login);
+
+  // --- ナビゲーション ---
+  const next = useCallback(() => {
+    setIndex((i) => Math.min(i + 1, Math.max(0, feed.length - 1)));
+  }, [feed.length]);
+  const prev = useCallback(() => {
+    setIndex((i) => Math.max(0, i - 1));
+  }, []);
+
+  // --- 操作（フィードへ即時反映。current がフィードから外れることで自動的に次へ進む） ---
+  const onFavorite = useCallback(() => {
+    if (!current) return;
+    channels.addFavorite(current.user_login);
+    showFlash('⭐ お気に入りに追加');
+  }, [current, channels, showFlash]);
+
+  const onVisited = useCallback(() => {
+    if (!current) return;
+    visited.addVisited(current);
+    showFlash('✓ 既視聴にした');
+  }, [current, visited, showFlash]);
+
+  const onExclude = useCallback(() => {
+    if (!current) return;
+    channels.addExcluded(current.user_login);
+    showFlash('🚫 除外した');
+  }, [current, channels, showFlash]);
+
+  const onMute = useCallback(() => {
+    const m = toggleMute();
+    showFlash(m ? '🔇 ミュート' : '🔊 ミュート解除');
+  }, [toggleMute, showFlash]);
+
+  const onPlayPause = useCallback(() => {
+    togglePlay();
+    showFlash(paused ? '▶ 再生' : '⏸ 一時停止');
+  }, [togglePlay, paused, showFlash]);
+
+  const onOpenTwitch = useCallback(() => {
+    if (!current) return;
+    window.open(`https://twitch.tv/${current.user_login}`, '_blank', 'noopener,noreferrer');
+  }, [current]);
+
+  const onClose = useCallback(() => {
+    window.location.href = homeUrl({ demo: demoMode });
+  }, [demoMode]);
+
+  const switchSource = useCallback((src) => {
+    setSource(src);
+    setIndex(0);
+  }, []);
+
+  const { onTouchStart, onTouchEnd } = useZapControls({
+    onPrev: prev, onNext: next, onFavorite, onVisited, onExclude, onClose,
+    onPlayPause, onMute, onOpenTwitch,
+  });
+
+  // --- 検索 ---
+  const handleSearch = useCallback(() => {
+    if (demoMode) search.searchDemo(settings);
+    else search.searchReal(token, settings);
+    setIndex(0);
+  }, [demoMode, search, settings, token]);
+
+  const handleReset = useCallback(() => {
+    if (!confirm('既視聴履歴をクリアしますか？\n(検索条件・お気に入り・除外リストは保持されます)')) return;
+    visited.clearVisited();
+  }, [visited]);
+
+  // 並び替え変更で即時並べ直し（検索を待たない）
+  const firstSort = useRef(true);
+  useEffect(() => {
+    if (firstSort.current) { firstSort.current = false; return; }
+    search.setStreams((prev) => (prev.length > 0 ? sortStreams(prev, settings.sortOrder) : prev));
+  }, [settings.sortOrder]);
+
+  // 初回ロード時、保存済み条件で自動検索（本体からの遷移で即フィード表示）
+  const didAuto = useRef(false);
+  useEffect(() => {
+    if (didAuto.current) return;
+    if (demoMode) { didAuto.current = true; search.searchDemo(settings); return; }
+    if (token && search.streams.length === 0 && settings.gameName.trim()) {
+      didAuto.current = true;
+      search.searchReal(token, settings);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  const rootRef = useRef(null);
+  useEffect(() => { rootRef.current?.focus({ preventScroll: true }); }, []);
+
+  const chatSrc = useMemo(() => {
+    if (!current) return '';
+    return `https://www.twitch.tv/embed/${encodeURIComponent(current.user_login)}/chat?parent=${encodeURIComponent(PLAYER_PARENT)}&darkpopout`;
+  }, [current]);
+
+  if (!authed) {
+    return (
+      <div className="zap-overlay zap-gate">
+        <div className="zap-gate-box">
+          <h1 className="zap-brand">DPGK モード</h1>
+          <p>このページで配信を検索・視聴するには Twitch 認証が必要です。</p>
+          <p>検索画面でログインすると、このページでもそのまま使えます。</p>
+          <div className="zap-gate-actions">
+            <a className="zap-open-twitch" href={homeUrl()}>検索画面へ（ログイン）</a>
+            <a className="zap-chat-toggle" href={homeUrl({ demo: true })}>デモを見る</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`zap-overlay${showChat ? ' with-chat' : ''}`}
+      ref={rootRef}
+      tabIndex={-1}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      <div className="zap-topbar">
+        <span className="zap-brand">DPGK</span>
+        <button
+          type="button"
+          className={`zap-chat-toggle${showSearch ? ' active' : ''}`}
+          onClick={() => setShowSearch((v) => !v)}
+          title="検索条件を開く"
+        >
+          🔍 検索
+        </button>
+        <div className="zap-source-toggle">
+          <button
+            type="button"
+            className={`zap-source-btn${source === 'others' ? ' active' : ''}`}
+            onClick={() => switchSource('others')}
+          >
+            その他 ({counts.others})
+          </button>
+          <button
+            type="button"
+            className={`zap-source-btn${source === 'favorites' ? ' active' : ''}`}
+            onClick={() => switchSource('favorites')}
+          >
+            ⭐ お気に入り ({counts.fav})
+          </button>
+        </div>
+        <div className="zap-counter">{feed.length > 0 ? `${index + 1} / ${feed.length}` : '0 / 0'}</div>
+        <button
+          type="button"
+          className="zap-chat-toggle"
+          onClick={onPlayPause}
+          title="再生 / 一時停止 (Space)"
+        >
+          {paused ? '▶ 再生' : '⏸ 停止'}
+        </button>
+        <button
+          type="button"
+          className={`zap-chat-toggle${showChat ? ' active' : ''}`}
+          onClick={() => setShowChat((v) => !v)}
+          title="チャットの表示/非表示"
+        >
+          💬 チャット
+        </button>
+        <button type="button" className="zap-close" aria-label="検索画面に戻る" onClick={onClose}>×</button>
+      </div>
+
+      {showSearch && (
+        <div className="zap-search-panel">
+          <SearchFilters
+            settings={settings}
+            onChange={updateSettings}
+            onSearch={handleSearch}
+            onReset={handleReset}
+            searching={search.searching}
+          />
+          {search.status && <p className="zap-search-status">{search.status}</p>}
+        </div>
+      )}
+
+      <div className="zap-body">
+        {current ? (
+          <>
+            <div className="zap-main">
+              <div className="zap-player">
+                <div id={playerId} className="zap-player-embed" />
+                {/* iframe にフォーカスを渡さない透明オーバーレイ。タップでミュート切替 */}
+                <div
+                  className="zap-player-overlay"
+                  onClick={onMute}
+                  title="タップでミュート切替"
+                />
+                {muted && <div className="zap-mute-indicator">🔇</div>}
+                {paused && <div className="zap-pause-indicator">⏸</div>}
+                {flash && <div className="zap-flash">{flash}</div>}
+              </div>
+              <div className="zap-meta">
+                <strong className="zap-streamer">{current.user_name}</strong>
+                <span className="zap-title">{current.title || '(タイトルなし)'}</span>
+                <span className="zap-viewers">👁 {current.viewer_count.toLocaleString()} 人</span>
+                {current.tags && current.tags.length > 0 && (
+                  <div className="zap-tags">
+                    {current.tags.map((tag) => (
+                      <span key={tag} className="zap-tag">{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {showChat && (
+              <div className="zap-chat">
+                <iframe key={`chat-${current.user_login}`} src={chatSrc} title="Twitch chat" />
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="zap-empty">
+            <p>表示できる配信がありません。</p>
+            <p>🔍 検索で配信を探すか、上のボタンでリストを切り替えてください。</p>
+          </div>
+        )}
+      </div>
+
+      {/* 操作行: 上→下→右→左→Delete の順 ＋ 同じ行にミュート・Twitchで開く */}
+      <div className="zap-controls">
+        <button type="button" className="zap-ctrl prev" onClick={prev} title="前へ (↑)">↑ 前へ</button>
+        <button type="button" className="zap-ctrl next" onClick={next} title="次へ (↓)">↓ 次へ</button>
+        <button type="button" className="zap-ctrl visited" onClick={onVisited} title="既視聴 (←)">← 既視聴</button>
+        <button type="button" className="zap-ctrl fav" onClick={onFavorite} title="お気に入り (→)">お気に入り →</button>
+        <button type="button" className="zap-ctrl exclude" onClick={onExclude} title="除外 (Delete)">🚫 除外</button>
+        <button type="button" className="zap-ctrl mute" onClick={onMute} title="ミュート (M)">
+          {muted ? '🔇 ミュート中' : '🔊 ミュート'}
+        </button>
+        <a
+          className="zap-ctrl open-twitch"
+          href={current ? `https://twitch.tv/${current.user_login}` : '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Twitchで開く (Enter)"
+        >
+          Twitchで開く ↗
+        </a>
+      </div>
+
+      <div className="zap-hint">
+        ↑ 前へ ・ ↓ 次へ ・ → お気に入り ・ ← 既視聴 ・ Delete 除外 ・ Space 再生/停止 ・ M ミュート ・ Enter Twitchで開く ・ Esc 戻る（スワイプ上下でも操作可）
+      </div>
+    </div>
+  );
+}

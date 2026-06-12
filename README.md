@@ -1,100 +1,123 @@
-# twitch-sankagata-search
+# Twitch ライブ配信検索 ＋ DPGKモード
 
-Twitch のライブ配信を、ゲーム名・タグ・タイトル・視聴者数などで絞り込んで検索できる Web アプリ。
-お気に入り / 除外 / 既視聴の管理、サイドプレビュー、そして **DPGKモード（TikTok風ザッピング）** を備えています。
+Twitch のライブ配信を **ゲーム名・タグ・タイトル・視聴者数・言語** で細かく絞り込んで探せる Web アプリです。
+気になった配信者の **お気に入り / 除外 / 既視聴** を管理でき、見つけた配信は **DPGKモード** で
+TikTok のように 1 本ずつ全画面でザッピングしながら視聴できます。
 
-React + Vite 製で、GitHub Pages にデプロイされます。
+2 つのページで構成されています。
 
-## 必要環境
+| ページ | URL | 役割 |
+| --- | --- | --- |
+| 検索画面 | `/`（index.html） | 条件を指定して配信を検索・一覧・プレビュー |
+| DPGKモード | `/dpgk.html` | 1 配信ずつ全画面でザッピング視聴 |
 
-- Node.js 18 以降（推奨 20）
+検索画面の **⚡ ボタン** から DPGKモードへ移動できます。お気に入り・除外・既視聴の情報は
+両ページで共有されるので、どちらで操作しても結果はすぐに反映されます。
 
-## セットアップ
+---
+
+## 使い方
+
+### 1. 起動する
+
+いちばん簡単なのは、付属の起動スクリプトをダブルクリックする方法です。
+
+- **`起動.ps1`** をダブルクリック（または PowerShell で `.\起動.ps1`）
+
+Node.js が入っていれば、必要な準備を自動で行い、ブラウザでデモ画面を開きます。
+Node.js が無い場合は [nodejs.org](https://nodejs.org/) からインストールしてください（推奨: 20 以降）。
+
+> 手動で起動する場合は、ターミナルで `npm install` → `npm run dev` を実行し、
+> 表示された `http://localhost:5173/` を開きます。
+
+### 2. まずはデモで試す（認証不要）
+
+サンプルデータで画面・操作感をすぐ確認できます。Twitch アカウントは不要です。
+
+- `http://localhost:5173/?demo=1` を開く（または検索画面の「🎬 デモモード」ボタン）
+
+> デモの配信プレイヤーは架空チャンネルのため映像は再生されません（レイアウト確認用）。
+
+### 3. 実際の配信を検索する（Twitch ログイン）
+
+本物の配信を検索するには Twitch ログインが必要です。
+
+1. `http://localhost:5173/` を開く
+2. 「Twitch認証」からログイン
+3. ゲーム名などの条件を入れて検索
+
+ログイン状態は DPGKモードのページにも引き継がれます。
+
+> **初回のみ開発者設定が必要です。** [Twitch Developer Console](https://dev.twitch.tv/console) で
+> アプリの **OAuth リダイレクト URL** に `http://localhost:5173/` を登録してください。
+
+---
+
+## 検索画面でできること
+
+- ゲーム名 / 言語 / タイトルキーワード / タグ（OR・AND）/ 除外タグ / 最大視聴者数で絞り込み
+- 配信カードをクリックすると、その場でプレビュー再生（横長画面は右、縦長画面は下）
+- ⭐ お気に入り / 🚫 除外 / 既視聴 の登録・管理
+- 😺 カオスモード（おまけ）/ ⚡ DPGKモードへ移動
+
+---
+
+## DPGKモード（⚡）の操作
+
+配信を 1 本ずつ全画面で表示し、サクサク切り替えながら視聴できます。
+チャット欄は横長画面では右、縦長画面では下に表示します（💬 ボタンで表示/非表示）。
+画面上部の **🔍 検索** から、DPGKモードのまま検索条件を変えて配信を探し直せます。
+
+| 操作 | キーボード | 画面ボタン / タッチ |
+| --- | --- | --- |
+| 次へ送る | ↓ | ボタン / 上スワイプ |
+| 前へ戻る | ↑ | ボタン / 下スワイプ |
+| お気に入りに追加 | → | ボタン |
+| 既視聴にする | ← | ボタン |
+| 除外する | Delete | ボタン |
+| 再生 / 一時停止 | Space（メディアキーも可） | 上部ボタン |
+| ミュート切替 | M | ボタン / 動画タップ |
+| Twitch で開く | Enter | ボタン |
+| 検索画面に戻る | Esc | × ボタン |
+
+- 上部のトグルで **「その他」⇔「お気に入り」** のリストを切り替えられます。
+- **お気に入り / 既視聴 / 除外にした配信は、その場でフィードから消えます。**
+  既視聴にした配信が「↑ 前へ」で再び出てくることはありません。
+- 動画プレイヤーのネイティブ操作（音量・全画面など）は無効化されています。
+  操作はキーボードと画面下のボタンに集約しています。
+
+---
+
+## ビルド / デプロイ
 
 ```bash
-npm install
-```
-
-## ローカルで動かす
-
-### 1. デモモード（認証なし・表示確認用）
-
-サンプルデータで UI・デザイン・ザッピングモードを即確認できます。Twitch 認証は不要です。
-
-```bash
-npm run dev
-```
-
-- `http://localhost:5173/?demo=1` を開く（または画面の「🎬 デモモード」ボタン）
-
-> デモモードの配信プレイヤーは架空チャンネルのため映像は再生されません（レイアウト確認用）。
-
-### 2. 実データ（localhost で Twitch 認証）
-
-実際の Twitch API を使う場合は、[Twitch Developer Console](https://dev.twitch.tv/console) のアプリ設定で
-**OAuth リダイレクト URL** に以下を登録してください:
-
-```
-http://localhost:5173/
-```
-
-登録後 `npm run dev` を起動し、`http://localhost:5173/` で「Twitch認証」からログインします。
-
-## ビルド / プレビュー
-
-```bash
-npm run build     # dist/ に本番ビルドを出力
+npm run build     # dist/ に本番ビルド（index.html と dpgk.html の 2 ページ）を出力
 npm run preview   # ビルド結果をローカル確認
 ```
 
-## デプロイ（GitHub Pages）
+`main` ブランチへ push すると [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) が
+自動でビルドして GitHub Pages へ公開します。公開 URL は
+<https://doggyid.github.io/twitch-sankagata-search/> です。
 
-`main` への push で [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) が自動ビルド＆デプロイします。
+> 本番では Twitch Developer Console の OAuth リダイレクト URL に
+> `https://doggyid.github.io/twitch-sankagata-search/` も登録してください。
 
-初回のみ:
-
-1. リポジトリ Settings → Pages → **Source: GitHub Actions** を選択
-2. Twitch Developer Console の OAuth リダイレクト URL に本番 URL を追加:
-   ```
-   https://doggyid.github.io/twitch-sankagata-search/
-   ```
-
-> Vite の `base` は本番ビルド時のみ `/twitch-sankagata-search/` になります（ローカルは `/`）。
-
-## 操作
-
-### 検索画面
-
-- ゲーム名・言語・タイトルキーワード・タグ(OR/AND)・除外タグ・最大視聴者数で絞り込み
-- 配信カードをクリックで右側（モバイルは下）にプレビュー再生
-- お気に入り ⭐ / 除外 🚫 / 既視聴の管理
-
-### DPGKモード ⚡（カオスモード 😺 の隣）
-
-1配信ずつ全画面表示し、高速に切り替えられます。動画はウィンドウ幅いっぱいに表示し、
-チャット欄を横長画面では右・縦長画面では下に配置します（💬ボタンで表示/非表示）。
-
-| 操作 | キーボード | タッチ |
-| --- | --- | --- |
-| 次へ送る | ↓ | 上スワイプ |
-| 前へ戻る | ↑ | 下スワイプ |
-| お気に入り追加 | → | 画面ボタン |
-| 既視聴にする | ← | 画面ボタン |
-| 除外 | Delete | 画面ボタン |
-| 閉じる | Esc | × ボタン |
-
-上部のトグルで「その他」⇔「お気に入り」のリストを切り替えられます。
-操作結果（お気に入り/既視聴/除外）は本体の検索画面にも即時反映されます。
+---
 
 ## 構成
 
 ```
-src/
-├── main.jsx / App.jsx        アプリ本体
-├── api/twitch.js             Twitch Helix API
-├── hooks/                    auth / channels / visited / settings / theme
-├── components/               Header, SearchFilters, Results, PreviewPanel, ...
-│   └── ZapMode/              DPGKモード（ザッピング）
-├── mock/mockStreams.js       デモモード用データ
-└── styles/                   theme.css（Twitch風デザインシステム）+ app.css
+twitch-sankagata-search/
+├── index.html / dpgk.html        2 つのページのエントリ
+├── src/
+│   ├── main.jsx / App.jsx         検索画面
+│   ├── dpgk.jsx                   DPGKモードのエントリ
+│   ├── components/
+│   │   ├── ZapMode/DpgkApp.jsx    DPGKモード本体
+│   │   └── ...                    Header / SearchFilters / Results / PreviewPanel ほか
+│   ├── hooks/                     auth / channels / visited / settings / theme / streamSearch
+│   ├── api/twitch.js              Twitch Helix API
+│   ├── mock/mockStreams.js        デモ用データ
+│   └── styles/                    theme.css（Twitch風デザイン）+ app.css
+└── 起動.ps1                       ローカル起動スクリプト
 ```

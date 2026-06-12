@@ -1,10 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CLIENT_ID, SCOPE } from '../config.js';
 
-// Twitch OAuth (implicit flow)。hash からトークンを取り出し、リダイレクトURIを動的算出
+const TOKEN_KEY = 'twitchAccessToken';
+
+// Twitch OAuth (implicit flow)。hash からトークンを取り出し、リダイレクトURIを動的算出。
+// トークンは localStorage に保存し、別ページ（DPGK）と共有する
 export function useAuth() {
-  const [token, setToken] = useState(null);
+  const [token, setTokenState] = useState(() => localStorage.getItem(TOKEN_KEY) || null);
   const [authError, setAuthError] = useState(null);
+
+  const setToken = useCallback((value) => {
+    setTokenState(value);
+    if (value) localStorage.setItem(TOKEN_KEY, value);
+    else localStorage.removeItem(TOKEN_KEY);
+  }, []);
 
   const redirectUri = useMemo(() => {
     let uri = window.location.href.split('?')[0].split('#')[0];

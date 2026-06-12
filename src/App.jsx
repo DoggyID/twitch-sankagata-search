@@ -5,15 +5,16 @@ import SearchFilters from './components/SearchFilters.jsx';
 import ChannelManagement from './components/ChannelManagement.jsx';
 import Results from './components/Results.jsx';
 import PreviewPanel from './components/PreviewPanel.jsx';
-import ZapMode from './components/ZapMode/ZapMode.jsx';
 import { useTheme } from './hooks/useTheme.js';
 import { useAuth } from './hooks/useAuth.js';
 import { useChannels, normalizeLogin } from './hooks/useChannels.js';
 import { useVisited } from './hooks/useVisited.js';
 import { useSettings } from './hooks/useSettings.js';
-import { getGameByName, fetchAllStreams, fetchUserProfiles, filterStreams, sortStreams } from './api/twitch.js';
+import { useStreamSearch } from './hooks/useStreamSearch.js';
+import { sortStreams } from './api/twitch.js';
 import { MOCK_STREAMS } from './mock/mockStreams.js';
 import { activateChaos } from './chaos.js';
+import { dpgkUrl } from './dpgkNav.js';
 
 const DEMO_PARAM = new URLSearchParams(window.location.search).get('demo') === '1';
 
@@ -25,12 +26,10 @@ export default function App() {
   const [settings, updateSettings] = useSettings();
 
   const [demoMode, setDemoMode] = useState(DEMO_PARAM);
-  const [streams, setStreams] = useState(DEMO_PARAM ? sortStreams(MOCK_STREAMS, 'desc') : []);
-  const [gameInfo, setGameInfo] = useState(null);
-  const [status, setStatus] = useState('');
-  const [searching, setSearching] = useState(false);
+  const { streams, setStreams, gameInfo, status, searching, searchDemo, searchReal } = useStreamSearch(
+    DEMO_PARAM ? sortStreams(MOCK_STREAMS, 'desc') : []
+  );
   const [preview, setPreview] = useState(null);
-  const [zapOpen, setZapOpen] = useState(false);
 
   const authed = !!token || demoMode;
 
@@ -69,63 +68,10 @@ export default function App() {
   }, [streams, channels, visited]);
 
   // --- 検索 ---
-  const runDemoSearch = useCallback(() => {
-    const filtered = sortStreams(filterStreams(MOCK_STREAMS, settings), settings.sortOrder);
-    setStreams(filtered);
-    setGameInfo({ name: settings.gameName || 'デモ', id: 'demo' });
-    setStatus(`${filtered.length}件の配信が見つかりました。（デモモード）`);
-  }, [settings]);
-
-  const handleSearch = useCallback(async () => {
-    if (demoMode) {
-      runDemoSearch();
-      return;
-    }
-    if (!token) {
-      setStatus('エラー: Twitch認証が完了していません。');
-      return;
-    }
-    const gameName = settings.gameName.trim();
-    if (!gameName) {
-      setGameInfo({ error: '検索するゲーム名を入力してください。' });
-      return;
-    }
-    setSearching(true);
-    setStatus('');
-    try {
-      setGameInfo({ loading: `「${gameName}」のIDを検索中...` });
-      const game = await getGameByName(token, gameName);
-      if (!game) {
-        setGameInfo({ notFound: gameName });
-        setStatus('指定されたゲーム名が見つからなかったため、配信を検索できません。');
-        return;
-      }
-      setGameInfo({ ...game });
-
-      setStatus(`ゲームID「${game.id}」で配信を検索中...`);
-      const all = await fetchAllStreams(token, game.id, settings.language, (count) => {
-        setStatus(`配信を検索中... (現在${count}件取得済み)`);
-      });
-
-      let filtered = sortStreams(filterStreams(all, settings), settings.sortOrder);
-
-      if (filtered.length > 0) {
-        setStatus(`${filtered.length}件の配信が見つかりました。配信者のアイコンを取得中...`);
-        const userIds = [...new Set(filtered.map((s) => s.user_id))];
-        const profiles = await fetchUserProfiles(token, userIds);
-        filtered = filtered.map((s) => ({ ...s, profile_image_url: profiles[s.user_id] }));
-        setStatus(`${filtered.length}件の配信が見つかりました。`);
-      } else {
-        setStatus('0件の配信が見つかりました。指定された条件に一致するライブ配信は見つかりませんでした。');
-      }
-      setStreams(filtered);
-    } catch (err) {
-      console.error('検索エラー:', err);
-      setStatus(`エラーが発生しました: ${err.message}`);
-    } finally {
-      setSearching(false);
-    }
-  }, [demoMode, runDemoSearch, token, settings]);
+  const handleSearch = useCallback(() => {
+    if (demoMode) searchDemo(settings);
+    else searchReal(token, settings);
+  }, [demoMode, searchDemo, searchReal, token, settings]);
 
   const handleReset = useCallback(() => {
     if (!confirm('既視聴履歴をクリアしますか？\n(検索条件・お気に入り・除外リストは保持されます)')) return;
@@ -134,11 +80,12 @@ export default function App() {
 
   const handleDemo = useCallback(() => {
     setDemoMode(true);
-    const filtered = sortStreams(filterStreams(MOCK_STREAMS, settings), settings.sortOrder);
-    setStreams(filtered);
-    setGameInfo({ name: settings.gameName || 'デモ', id: 'demo' });
-    setStatus(`${filtered.length}件の配信が見つかりました。（デモモード）`);
-  }, [settings]);
+    searchDemo(settings);
+  }, [searchDemo, settings]);
+
+  const openDpgk = useCallback(() => {
+    window.location.href = dpgkUrl({ demo: demoMode });
+  }, [demoMode]);
 
   // --- プレビュー操作 ---
   const previewToggleFav = useCallback(() => {
@@ -177,7 +124,7 @@ export default function App() {
             onSearch={handleSearch}
             onReset={handleReset}
             onChaos={activateChaos}
-            onZap={() => setZapOpen(true)}
+            onZap={openDpgk}
             searching={searching}
           />
 
@@ -207,16 +154,6 @@ export default function App() {
             />
           </div>
         </div>
-      )}
-
-      {zapOpen && (
-        <ZapMode
-          favList={favList}
-          othersList={othersVisible}
-          channels={channels}
-          visited={visited}
-          onClose={() => setZapOpen(false)}
-        />
       )}
     </div>
   );

@@ -109,8 +109,8 @@ export default function SearchFilters({ settings, onChange, onSearch, onReset, o
         <button className="secondary-button" onClick={onReset} title="閲覧済み履歴のみクリアします">
           リセット
         </button>
-        <button className="chaos-button" onClick={onChaos} title="カオスモード">😺</button>
-        <button className="zap-button" onClick={onZap} title="DPGKモード">⚡</button>
+        {onChaos && <button className="chaos-button" onClick={onChaos} title="カオスモード">😺</button>}
+        {onZap && <button className="zap-button" onClick={onZap} title="DPGKモード">⚡</button>}
       </div>
     </>
   );
