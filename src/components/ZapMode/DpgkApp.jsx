@@ -78,7 +78,7 @@ export default function DpgkApp() {
 
   // --- プレイヤー ---
   const playerId = useId().replace(/:/g, '');
-  const { muted, toggleMute, paused, togglePlay } = useTwitchPlayer(playerId, current?.user_login);
+  const { muted, toggleMute, paused, togglePlay, volume, setVolume } = useTwitchPlayer(playerId, current?.user_login);
 
   // --- ナビゲーション ---
   const next = useCallback(() => {
@@ -111,6 +111,10 @@ export default function DpgkApp() {
     const m = toggleMute();
     showFlash(m ? '🔇 ミュート' : '🔊 ミュート解除');
   }, [toggleMute, showFlash]);
+
+  const onVolumeChange = useCallback((e) => {
+    setVolume(Number(e.target.value));
+  }, [setVolume]);
 
   const onPlayPause = useCallback(() => {
     togglePlay();
@@ -242,7 +246,7 @@ export default function DpgkApp() {
         >
           💬 チャット
         </button>
-        <button type="button" className="zap-close" aria-label="検索画面に戻る" onClick={onClose}>×</button>
+        <button type="button" className="zap-close" aria-label="DPGKモードを退出" onClick={onClose}>← 退出</button>
       </div>
 
       {showSearch && (
@@ -274,6 +278,41 @@ export default function DpgkApp() {
                 {paused && <div className="zap-pause-indicator">⏸</div>}
                 {flash && <div className="zap-flash">{flash}</div>}
               </div>
+              <div className="zap-controls">
+                <button type="button" className="zap-ctrl prev" onClick={prev} title="前へ (↑)">↑ 前へ</button>
+                <button type="button" className="zap-ctrl next" onClick={next} title="次へ (↓)">↓ 次へ</button>
+                <button type="button" className="zap-ctrl visited" onClick={onVisited} title="既視聴 (←)">← 既視聴</button>
+                <button type="button" className="zap-ctrl fav" onClick={onFavorite} title="お気に入り (→)">お気に入り →</button>
+                <button type="button" className="zap-ctrl exclude" onClick={onExclude} title="除外 (Delete)">🚫 除外</button>
+                <button type="button" className="zap-ctrl mute" onClick={onMute} title="ミュート (M)">
+                  {muted ? '🔇 ミュート中' : '🔊 ミュート'}
+                </button>
+                <div className="zap-volume">
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={muted ? 0 : volume}
+                    onChange={onVolumeChange}
+                    tabIndex={-1}
+                    onMouseUp={(e) => e.currentTarget.blur()}
+                    onTouchEnd={(e) => e.currentTarget.blur()}
+                    className="zap-volume-slider"
+                    aria-label="音量"
+                    title="音量"
+                  />
+                </div>
+                <a
+                  className="zap-ctrl open-twitch"
+                  href={current ? `https://twitch.tv/${current.user_login}` : '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Twitchで開く (Enter)"
+                >
+                  Twitchで開く ↗
+                </a>
+              </div>
               <div className="zap-meta">
                 <strong className="zap-streamer">{current.user_name}</strong>
                 <span className="zap-title">{current.title || '(タイトルなし)'}</span>
@@ -299,27 +338,6 @@ export default function DpgkApp() {
             <p>🔍 検索で配信を探すか、上のボタンでリストを切り替えてください。</p>
           </div>
         )}
-      </div>
-
-      {/* 操作行: 上→下→右→左→Delete の順 ＋ 同じ行にミュート・Twitchで開く */}
-      <div className="zap-controls">
-        <button type="button" className="zap-ctrl prev" onClick={prev} title="前へ (↑)">↑ 前へ</button>
-        <button type="button" className="zap-ctrl next" onClick={next} title="次へ (↓)">↓ 次へ</button>
-        <button type="button" className="zap-ctrl visited" onClick={onVisited} title="既視聴 (←)">← 既視聴</button>
-        <button type="button" className="zap-ctrl fav" onClick={onFavorite} title="お気に入り (→)">お気に入り →</button>
-        <button type="button" className="zap-ctrl exclude" onClick={onExclude} title="除外 (Delete)">🚫 除外</button>
-        <button type="button" className="zap-ctrl mute" onClick={onMute} title="ミュート (M)">
-          {muted ? '🔇 ミュート中' : '🔊 ミュート'}
-        </button>
-        <a
-          className="zap-ctrl open-twitch"
-          href={current ? `https://twitch.tv/${current.user_login}` : '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Twitchで開く (Enter)"
-        >
-          Twitchで開く ↗
-        </a>
       </div>
 
       <div className="zap-hint">

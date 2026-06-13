@@ -24,6 +24,7 @@ export function useTwitchPlayer(containerId, channel) {
   const pausedRef = useRef(false);
   const [muted, setMuted] = useState(false);
   const [paused, setPausedState] = useState(false);
+  const [volume, setVolumeState] = useState(0.5);
 
   const setPaused = useCallback((v) => { pausedRef.current = v; setPausedState(v); }, []);
 
@@ -46,7 +47,13 @@ export function useTwitchPlayer(containerId, channel) {
         });
         playerRef.current = p;
         p.addEventListener(Player.READY, () => {
-          if (!cancelled) setMuted(p.getMuted());
+          if (cancelled) return;
+          // Twitch はミュート/音量状態をブラウザ側に永続化するため、
+          // READY 時に明示的に非ミュートへ上書きする（リロード後もミュート固定にならないよう）
+          p.setMuted(false);
+          if (p.getVolume() === 0) p.setVolume(0.5);
+          setMuted(false);
+          setVolumeState(p.getVolume());
         });
         p.addEventListener(Player.PLAY, () => { if (!cancelled) setPaused(false); });
         p.addEventListener(Player.PLAYING, () => { if (!cancelled) setPaused(false); });
@@ -64,10 +71,28 @@ export function useTwitchPlayer(containerId, channel) {
     if (!p) return muted;
     const next = !p.getMuted();
     p.setMuted(next);
-    if (!next && p.getVolume() === 0) p.setVolume(0.5);
+    if (!next && p.getVolume() === 0) {
+      p.setVolume(0.5);
+      setVolumeState(0.5);
+    }
     setMuted(next);
     return next;
   }, [muted]);
+
+  // 音量を 0〜1 で設定する。v>0 でミュート解除、v===0 でミュートに同期する
+  const setVolume = useCallback((v) => {
+    const p = playerRef.current;
+    if (!p) return;
+    p.setVolume(v);
+    setVolumeState(v);
+    if (v > 0 && p.getMuted()) {
+      p.setMuted(false);
+      setMuted(false);
+    } else if (v === 0 && !p.getMuted()) {
+      p.setMuted(true);
+      setMuted(true);
+    }
+  }, []);
 
   const togglePlay = useCallback(() => {
     const p = playerRef.current;
@@ -78,5 +103,5 @@ export function useTwitchPlayer(containerId, channel) {
     setPaused(!pausedRef.current);
   }, [setPaused]);
 
-  return { muted, toggleMute, paused, togglePlay };
+  return { muted, toggleMute, paused, togglePlay, volume, setVolume };
 }

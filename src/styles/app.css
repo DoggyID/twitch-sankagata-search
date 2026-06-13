@@ -399,10 +399,11 @@ input:checked + .slider:before { transform: translateX(24px); }
 }
 .zap-open-twitch:hover { background: var(--twitch-purple-hover, #9147ff); filter: brightness(1.1); }
 .zap-close {
-  background: transparent; border: none; color: #fff; font-size: 1.6rem;
-  line-height: 1; cursor: pointer; padding: 0 8px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
+  color: #adadb8; font-weight: 600; padding: 6px 12px; border-radius: var(--radius-sm);
+  font-size: 0.82rem; cursor: pointer; white-space: nowrap;
 }
-.zap-close:hover { background: transparent; color: #ff6b81; }
+.zap-close:hover { background: rgba(255,100,120,0.15); border-color: #ff6b81; color: #ff6b81; }
 
 /* 本体: 動画(zap-main) + チャット(zap-chat)。横長は右、縦長は下に配置 */
 .zap-body { flex: 1; display: flex; min-height: 0; min-width: 0; }
@@ -474,7 +475,7 @@ input:checked + .slider:before { transform: translateX(24px); }
 
 .zap-controls {
   display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center;
-  padding: var(--space-3); background: rgba(0,0,0,0.4);
+  padding: var(--space-2) 0; flex: 0 0 auto;
 }
 .zap-ctrl {
   border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06);
@@ -487,6 +488,15 @@ input:checked + .slider:before { transform: translateX(24px); }
 .zap-ctrl.exclude { border-color: #e0526b; color: #ff8a9b; }
 .zap-ctrl.exclude:hover { background: rgba(224,82,107,0.18); }
 .zap-ctrl.mute:hover { background: rgba(255,255,255,0.14); }
+.zap-volume {
+  display: flex; align-items: center;
+  border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06);
+  border-radius: var(--radius-sm); padding: 4px 10px;
+}
+.zap-volume-slider {
+  width: 90px; cursor: pointer; accent-color: var(--twitch-purple);
+  vertical-align: middle;
+}
 /* 操作行内の「Twitchで開く」リンク（button ではなく a なので個別指定） */
 .zap-ctrl.open-twitch {
   display: inline-flex; align-items: center; text-decoration: none;
