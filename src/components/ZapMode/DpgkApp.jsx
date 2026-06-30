@@ -11,7 +11,7 @@ import { homeUrl } from '../../dpgkNav.js';
 import SearchFilters from '../SearchFilters.jsx';
 import { useZapControls } from './useZapControls.js';
 import { useFeed } from '../../hooks/useFeed.js';
-import { usePlayerPool } from './usePlayerPool.js';
+import { usePlayerPool, MAX_PRELOAD_COUNT } from './usePlayerPool.js';
 
 const DEMO_PARAM = new URLSearchParams(window.location.search).get('demo') === '1';
 
@@ -67,7 +67,20 @@ export default function DpgkApp() {
     enabled: authed,
     parent: PLAYER_PARENT,
     resetKey: poolResetKey,
+    preloadCount: settings.preloadCount,
   });
+
+  // ブラウザの自動再生ブロックでミュート再試行になった時、ユーザーに気づいてもらう
+  const lastBlockedNoticeRef = useRef(null);
+  useEffect(() => {
+    const activeSlot = playerPool.slots.find((slot) => slot.role === 'active');
+    if (!activeSlot) return;
+    const key = `${activeSlot.login}:${activeSlot.lastError}`;
+    if (activeSlot.lastError === 'playback blocked' && lastBlockedNoticeRef.current !== key) {
+      lastBlockedNoticeRef.current = key;
+      showFlash('🔇 自動再生がブロックされたためミュートで再生中');
+    }
+  }, [playerPool.slots, showFlash]);
 
   // --- ナビゲーション ---
   const next = useCallback(() => {
@@ -213,6 +226,17 @@ export default function DpgkApp() {
             ⭐ お気に入り ({counts.fav})
           </button>
         </div>
+        <label className="zap-preload-select" title="次の配信を裏で先読みしておく本数。多いほど切替は速くなるが通信量・負荷が増える">
+          先読み
+          <select
+            value={settings.preloadCount}
+            onChange={(e) => updateSettings({ preloadCount: Number(e.target.value) })}
+          >
+            {Array.from({ length: MAX_PRELOAD_COUNT + 1 }, (_, n) => (
+              <option key={n} value={n}>{n === 0 ? 'なし' : `${n}本`}</option>
+            ))}
+          </select>
+        </label>
         <div className="zap-counter">{feed.length > 0 ? `${safeIndex + 1} / ${feed.length}` : '0 / 0'}</div>
         <button
           type="button"

@@ -6,6 +6,10 @@ let poolInstanceSeq = 0;
 const SCRIPT_ID = 'twitch-player-embed-v1';
 const SCRIPT_SRC = 'https://player.twitch.tv/js/embed/v1.js';
 const LOW_QUALITY_CANDIDATES = ['160p30', '160p', '360p30', '360p'];
+// プリロード本数の上限（active 1 + 最大3先読み）。スロット数は常にこの数で固定し、
+// preloadCount が変わっても配列の再構築は発生させない（使わないスロットはidleのまま）。
+export const MAX_PRELOAD_COUNT = 3;
+const MAX_SLOTS = MAX_PRELOAD_COUNT + 1;
 
 function loadTwitchScript() {
   if (window.Twitch?.Player) return Promise.resolve(window.Twitch);
@@ -93,24 +97,38 @@ function syncPlayerState(slot) {
   slot.quality = safeCall(() => slot.player.getQuality(), null);
 }
 
-export function planPlayerAssignments(slots, activeLogin, preloadLogin) {
+export function planPlayerAssignments(slots, activeLogin, preloadLogins = []) {
   const active = normalizeLogin(activeLogin);
-  const preload = normalizeLogin(preloadLogin);
   const activeSlot = slots.find((slot) => normalizeLogin(slot.login) === active)
     ?? slots.find((slot) => slot.role === 'active')
     ?? slots[0];
-  const preloadSlot = slots.find((slot) => slot !== activeSlot) ?? null;
+
+  const used = new Set([activeSlot]);
+  const preloads = [];
+
+  // 近い順に、まず「すでにそのチャンネルを保持しているスロット」を再利用する
+  const wanted = preloadLogins.map(normalizeLogin).filter((login) => login && login !== active);
+  wanted.forEach((login) => {
+    const existing = slots.find((slot) => !used.has(slot) && normalizeLogin(slot.login) === login);
+    if (!existing) return;
+    used.add(existing);
+    preloads.push({ slotKey: existing.key, login });
+  });
+
+  // 未保持のチャンネルには、空いているスロットを割り当てる（スロットが尽きたら諦める）
+  wanted.forEach((login) => {
+    if (preloads.some((p) => p.login === login)) return;
+    const free = slots.find((slot) => !used.has(slot));
+    if (!free) return;
+    used.add(free);
+    preloads.push({ slotKey: free.key, login });
+  });
 
   return {
     active: active ? { slotKey: activeSlot?.key, login: active } : null,
-    preloadNext: preload && preload !== active && preloadSlot
-      ? { slotKey: preloadSlot.key, login: preload }
-      : null,
-    idle: slots
-      .filter((slot) => slot !== activeSlot && slot !== preloadSlot)
-      .map((slot) => slot.key),
+    preloads,
+    idle: slots.filter((slot) => !used.has(slot)).map((slot) => slot.key),
     activeSlot,
-    preloadSlot,
   };
 }
 
@@ -118,7 +136,8 @@ export function usePlayerPool(feed, index, options = {}) {
   const parent = options.parent;
   const enabled = options.enabled ?? true;
   const resetKey = options.resetKey ?? 0;
-  const enablePreload = options.enablePreload ?? !isLikelyMobileAutoplayBlocked();
+  const preloadCount = Math.max(0, Math.min(MAX_PRELOAD_COUNT, options.preloadCount ?? 1));
+  const enablePreload = (options.enablePreload ?? !isLikelyMobileAutoplayBlocked()) && preloadCount > 0;
   const instanceIdRef = useRef(null);
   const mountedRef = useRef(false);
   const tokenSeqRef = useRef(0);
@@ -127,6 +146,7 @@ export function usePlayerPool(feed, index, options = {}) {
   const [scriptReady, setScriptReady] = useState(!!window.Twitch?.Player);
   const [scriptError, setScriptError] = useState(null);
   const [snapshot, setSnapshot] = useState([]);
+  const [activePaused, setActivePaused] = useState(false);
 
   if (!instanceIdRef.current) {
     poolInstanceSeq += 1;
@@ -134,7 +154,7 @@ export function usePlayerPool(feed, index, options = {}) {
   }
 
   if (!slotsRef.current) {
-    slotsRef.current = [createSlot(instanceIdRef.current, 0), createSlot(instanceIdRef.current, 1)];
+    slotsRef.current = Array.from({ length: MAX_SLOTS }, (_, i) => createSlot(instanceIdRef.current, i));
   }
 
   const publish = () => {
@@ -145,6 +165,7 @@ export function usePlayerPool(feed, index, options = {}) {
       resetKey: resetKeyRef.current,
       scriptLoaded: scriptReady || !!window.Twitch?.Player,
       scriptError: scriptError?.message ?? null,
+      activePaused,
     };
   };
 
@@ -171,9 +192,23 @@ export function usePlayerPool(feed, index, options = {}) {
         if (eventName === Player.PLAY || eventName === Player.PLAYING) {
           slot.ready = true;
           slot.playing = true;
+          if (slot.role === 'active') setActivePaused(false);
         }
-        if (eventName === Player.PAUSE) slot.playing = false;
-        if (eventName === Player.PLAYBACK_BLOCKED) slot.lastError = 'playback blocked';
+        if (eventName === Player.PAUSE) {
+          slot.playing = false;
+          if (slot.role === 'active') setActivePaused(true);
+        }
+        if (eventName === Player.PLAYBACK_BLOCKED) {
+          slot.lastError = 'playback blocked';
+          // ミュート無しでの自動再生がブラウザにブロックされた場合、ミュートして再試行する。
+          // ここで何もしないと、assignSlot は同じチャンネル・同じroleへの再呼び出しを
+          // 早期returnするため、ユーザーが手動操作しない限り永遠に再生が始まらない。
+          if (!slot.desiredMuted) {
+            slot.desiredMuted = true;
+            safeCall(() => slot.player.setMuted(true));
+            safeCall(() => slot.player.play());
+          }
+        }
 
         safeCall(() => slot.player.setMuted(slot.desiredMuted));
         if (eventName === Player.PLAYING) {
@@ -218,6 +253,12 @@ export function usePlayerPool(feed, index, options = {}) {
   const assignSlot = (slot, login, role, twitch) => {
     const normalizedLogin = normalizeLogin(login);
     const shouldChangeChannel = normalizedLogin && normalizeLogin(slot.login) !== normalizedLogin;
+
+    // チャンネルもroleも変わっていない（同じスロットへの再確認呼び出し）場合は何もしない。
+    // ここで play() を無条件に呼び直すと、ユーザーが active スロットを一時停止した直後に
+    // 再生を再開させてしまう（activePaused の再計算で本effectが再実行されるため）。
+    if (!shouldChangeChannel && slot.role === role) return;
+
     const token = tokenSeqRef.current + 1;
     tokenSeqRef.current = token;
 
@@ -274,11 +315,20 @@ export function usePlayerPool(feed, index, options = {}) {
     slot.desiredMuted = true;
     slot.muted = true;
     slot.playing = false;
+    slot.ready = false;
+    slot.quality = null;
     slot.lastAssignedAt = Date.now();
     if (clearLogin) slot.login = null;
     if (slot.player) {
       safeCall(() => slot.player.setMuted(true));
       safeCall(() => slot.player.pause());
+      // pause() だけでは配信(ライブ)側の通信が裏で継続する可能性があるため、
+      // iframeごと破棄して確実にロード/視聴セッションを終了させる。
+      // 次にこのスロットが使われる時は assignSlot が player を作り直す。
+      const container = document.getElementById(slot.containerId);
+      if (container) container.textContent = '';
+      slot.player = null;
+      slot.listenersAttached = false;
     }
   };
 
@@ -324,7 +374,9 @@ export function usePlayerPool(feed, index, options = {}) {
     if (!enabled || !parent || !scriptReady || !window.Twitch?.Player || scriptError) return;
 
     const activeLogin = feed[index]?.user_login ?? null;
-    const preloadLogin = enablePreload ? feed[index + 1]?.user_login ?? null : null;
+    const preloadLogins = enablePreload && !activePaused
+      ? Array.from({ length: preloadCount }, (_, i) => feed[index + 1 + i]?.user_login).filter(Boolean)
+      : [];
     const slots = slotsRef.current;
 
     if (!activeLogin) {
@@ -333,7 +385,7 @@ export function usePlayerPool(feed, index, options = {}) {
       return;
     }
 
-    const plan = planPlayerAssignments(slots, activeLogin, preloadLogin);
+    const plan = planPlayerAssignments(slots, activeLogin, preloadLogins);
     const twitch = window.Twitch;
 
     if (plan.active?.slotKey) {
@@ -341,21 +393,18 @@ export function usePlayerPool(feed, index, options = {}) {
       assignSlot(slot, plan.active.login, 'active', twitch);
     }
 
-    const preloadSlot = plan.preloadNext?.slotKey
-      ? slots.find((candidate) => candidate.key === plan.preloadNext.slotKey)
-      : null;
-
-    if (preloadSlot) {
-      assignSlot(preloadSlot, plan.preloadNext.login, 'preloadNext', twitch);
-    }
+    plan.preloads.forEach(({ slotKey, login }) => {
+      const slot = slots.find((candidate) => candidate.key === slotKey);
+      if (slot) assignSlot(slot, login, 'preload', twitch);
+    });
 
     slots
-      .filter((slot) => slot.role !== 'active' && slot !== preloadSlot)
+      .filter((slot) => slot.role !== 'active' && !plan.preloads.some((p) => p.slotKey === slot.key))
       .forEach((slot) => idleSlot(slot, true));
 
     publish();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feed, index, parent, enabled, enablePreload, scriptReady, scriptError]);
+  }, [feed, index, parent, enabled, enablePreload, preloadCount, scriptReady, scriptError, activePaused]);
 
   const slots = snapshot.length > 0 ? snapshot : slotsRef.current.map(cloneSlot);
 
@@ -364,5 +413,7 @@ export function usePlayerPool(feed, index, options = {}) {
     scriptError,
     scriptReady,
     preloadEnabled: enablePreload,
-  }), [slots, scriptError, scriptReady, enablePreload]);
+    preloadCount,
+    activePaused,
+  }), [slots, scriptError, scriptReady, enablePreload, preloadCount, activePaused]);
 }

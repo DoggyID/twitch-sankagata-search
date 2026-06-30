@@ -13,6 +13,7 @@ const DEFAULTS = {
   excludeTagInput: '',
   sortOrder: 'desc',
   tagLogic: 'OR',
+  preloadCount: 1,
 };
 
 // 検索条件の保存/復元（変更のたびに localStorage へ反映）。

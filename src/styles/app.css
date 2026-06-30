@@ -406,6 +406,14 @@ input:checked + .slider:before { transform: translateX(24px); }
 }
 .zap-source-btn:hover { background: rgba(255,255,255,0.08); }
 .zap-source-btn.active { background: var(--twitch-purple); color: #fff; }
+.zap-preload-select {
+  display: flex; align-items: center; gap: var(--space-2);
+  color: #adadb8; font-weight: 600; font-size: 0.82rem;
+}
+.zap-preload-select select {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
+  color: #fff; font-weight: 600; padding: 5px 8px; border-radius: var(--radius-sm); font-size: 0.82rem;
+}
 .zap-counter { margin-left: auto; font-variant-numeric: tabular-nums; color: #adadb8; font-weight: 600; }
 .zap-chat-toggle {
   background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
@@ -456,7 +464,7 @@ input:checked + .slider:before { transform: translateX(24px); }
   pointer-events: auto;
   z-index: 2;
 }
-.zap-player-slot.preloadNext {
+.zap-player-slot.preload {
   opacity: 0.01;
   pointer-events: none;
   z-index: 1;

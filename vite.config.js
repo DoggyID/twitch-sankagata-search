@@ -8,6 +8,7 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/twitch-sankagata-search/' : '/',
   plugins: [react()],
+  server: { port: 5173, strictPort: true },
   build: {
     rollupOptions: {
       input: {
