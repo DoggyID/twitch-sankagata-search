@@ -1,6 +1,7 @@
 import { CLIENT_ID } from '../config.js';
 
 const HELIX = 'https://api.twitch.tv/helix';
+const DEFAULT_MAX_STREAMS = 1000;
 
 function headers(token) {
   return { Authorization: `Bearer ${token}`, 'Client-ID': CLIENT_ID };
@@ -16,14 +17,20 @@ export async function getGameByName(token, name) {
   return data.data && data.data.length > 0 ? data.data[0] : null;
 }
 
-// game_id の全ライブ配信をページングで取得
-export async function fetchAllStreams(token, gameId, language, onProgress) {
+// game_id のライブ配信をページングで取得。Twitchはviewer_count降順で返すため、上限到達で打ち切っても人気配信は失われない。
+export async function fetchAllStreams(token, gameId, languages, onProgress, opts = {}) {
   let all = [];
   let cursor = null;
   let page = 1;
+  let capped = false;
+  const maxStreams = opts.maxStreams ?? DEFAULT_MAX_STREAMS;
   do {
     let url = `${HELIX}/streams?game_id=${encodeURIComponent(gameId)}&first=100`;
-    if (language) url += `&language=${language}`;
+    if (Array.isArray(languages)) {
+      languages.filter(Boolean).forEach((language) => {
+        url += `&language=${encodeURIComponent(language)}`;
+      });
+    }
     if (cursor) url += `&after=${cursor}`;
 
     const res = await fetch(url, { headers: headers(token) });
@@ -33,12 +40,17 @@ export async function fetchAllStreams(token, gameId, language, onProgress) {
     }
     const data = await res.json();
     if (data.data && data.data.length > 0) all.push(...data.data);
+    if (all.length >= maxStreams) {
+      all = all.slice(0, maxStreams);
+      capped = true;
+      break;
+    }
     cursor = data.pagination?.cursor;
     if (onProgress) onProgress(all.length, page);
     if (cursor) await new Promise((r) => setTimeout(r, 300));
     page++;
   } while (cursor);
-  return all;
+  return { streams: all, capped };
 }
 
 // user_id[] → { user_id: profile_image_url } を100件ずつ取得

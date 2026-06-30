@@ -30,9 +30,12 @@ export function useStreamSearch(initialStreams = []) {
     }
     setSearching(true);
     setStatus('');
+    let capNote = '';
     try {
       setGameInfo({ loading: `「${gameName}」のIDを検索中...` });
-      const game = await getGameByName(token, gameName);
+      const game = settings.gameId
+        ? { id: settings.gameId, name: gameName, box_art_url: settings.gameBoxArtUrl }
+        : await getGameByName(token, gameName);
       if (!game) {
         setGameInfo({ notFound: gameName });
         setStatus('指定されたゲーム名が見つからなかったため、配信を検索できません。');
@@ -41,9 +44,10 @@ export function useStreamSearch(initialStreams = []) {
       setGameInfo({ ...game });
 
       setStatus(`ゲームID「${game.id}」で配信を検索中...`);
-      const all = await fetchAllStreams(token, game.id, settings.language, (count) => {
+      const { streams: all, capped } = await fetchAllStreams(token, game.id, settings.languages, (count) => {
         setStatus(`配信を検索中... (現在${count}件取得済み)`);
       });
+      capNote = capped ? ' 取得上限（1000件）に達したため、これ以上のページ取得を打ち切りました。視聴者数の多い順に取得しているため、人気配信は含まれています。' : '';
 
       let filtered = sortStreams(filterStreams(all, settings), settings.sortOrder);
 
@@ -61,6 +65,9 @@ export function useStreamSearch(initialStreams = []) {
       console.error('検索エラー:', err);
       setStatus(`エラーが発生しました: ${err.message}`);
     } finally {
+      if (capNote) {
+        setStatus((current) => `${current}${capNote}`);
+      }
       setSearching(false);
     }
   }, []);

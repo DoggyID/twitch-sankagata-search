@@ -8,6 +8,7 @@ import PreviewPanel from './components/PreviewPanel.jsx';
 import { useTheme } from './hooks/useTheme.js';
 import { useAuth } from './hooks/useAuth.js';
 import { useChannels, normalizeLogin } from './hooks/useChannels.js';
+import { useFeed } from './hooks/useFeed.js';
 import { useVisited } from './hooks/useVisited.js';
 import { useSettings } from './hooks/useSettings.js';
 import { useStreamSearch } from './hooks/useStreamSearch.js';
@@ -54,18 +55,7 @@ export default function App() {
   }, [streams]);
 
   // お気に入り / その他 / 既視聴フィルタ（本体 renderResults と同等）
-  const { favList, othersVisible } = useMemo(() => {
-    const fav = [];
-    const others = [];
-    streams.forEach((s) => {
-      const login = normalizeLogin(s.user_login);
-      if (channels.isExcluded(login)) return;
-      if (channels.isFavorite(login)) fav.push(s);
-      else others.push(s);
-    });
-    const othersVis = others.filter((s) => !visited.isVisited(s.user_login));
-    return { favList: fav, othersVisible: othersVis };
-  }, [streams, channels, visited]);
+  const { favList, othersList: othersVisible } = useFeed(streams, channels, visited);
 
   // --- 検索 ---
   const handleSearch = useCallback(() => {
@@ -120,6 +110,7 @@ export default function App() {
 
           <SearchFilters
             settings={settings}
+            token={demoMode ? null : token}
             onChange={updateSettings}
             onSearch={handleSearch}
             onReset={handleReset}

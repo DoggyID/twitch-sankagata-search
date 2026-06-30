@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
-import { useChannels, normalizeLogin } from '../../hooks/useChannels.js';
+import { useChannels } from '../../hooks/useChannels.js';
 import { useVisited } from '../../hooks/useVisited.js';
 import { useSettings } from '../../hooks/useSettings.js';
 import { useStreamSearch } from '../../hooks/useStreamSearch.js';
@@ -10,7 +10,7 @@ import { PLAYER_PARENT } from '../../config.js';
 import { homeUrl } from '../../dpgkNav.js';
 import SearchFilters from '../SearchFilters.jsx';
 import { useZapControls } from './useZapControls.js';
-import { useTwitchPlayer } from './useTwitchPlayer.js';
+import { useFeed } from '../../hooks/useFeed.js';
 
 const DEMO_PARAM = new URLSearchParams(window.location.search).get('demo') === '1';
 
@@ -35,29 +35,8 @@ export default function DpgkApp() {
 
   // --- ライブフィード（streams × お気に入り/除外/既視聴 を都度算出） ---
   // 既視聴・除外は常に除外。これにより前へ戻っても既視聴済みは出てこない。
-  const feed = useMemo(() => {
-    const out = [];
-    search.streams.forEach((s) => {
-      const login = normalizeLogin(s.user_login);
-      if (channels.isExcluded(login)) return;
-      if (visited.isVisited(s.user_login)) return;
-      const fav = channels.isFavorite(login);
-      if (source === 'favorites' ? fav : !fav) out.push(s);
-    });
-    return out;
-  }, [search.streams, channels.favorites, channels.excluded, visited.visited, source]);
-
-  const counts = useMemo(() => {
-    let fav = 0;
-    let others = 0;
-    search.streams.forEach((s) => {
-      const login = normalizeLogin(s.user_login);
-      if (channels.isExcluded(login) || visited.isVisited(s.user_login)) return;
-      if (channels.isFavorite(login)) fav += 1;
-      else others += 1;
-    });
-    return { fav, others };
-  }, [search.streams, channels.favorites, channels.excluded, visited.visited]);
+  const { favList, othersList, counts } = useFeed(search.streams, channels, visited);
+  const feed = useMemo(() => (source === 'favorites' ? favList : othersList), [source, favList, othersList]);
 
   const current = feed[index] || null;
 
@@ -77,8 +56,10 @@ export default function DpgkApp() {
   }, []);
 
   // --- プレイヤー ---
-  const playerId = useId().replace(/:/g, '');
-  const { muted, toggleMute, paused, togglePlay, volume, setVolume } = useTwitchPlayer(playerId, current?.user_login);
+  const playerSrc = useMemo(() => {
+    if (!current) return '';
+    return `https://player.twitch.tv/?channel=${encodeURIComponent(current.user_login)}&parent=${encodeURIComponent(PLAYER_PARENT)}&muted=false&autoplay=true`;
+  }, [current]);
 
   // --- ナビゲーション ---
   const next = useCallback(() => {
@@ -107,20 +88,6 @@ export default function DpgkApp() {
     showFlash('🚫 除外した');
   }, [current, channels, showFlash]);
 
-  const onMute = useCallback(() => {
-    const m = toggleMute();
-    showFlash(m ? '🔇 ミュート' : '🔊 ミュート解除');
-  }, [toggleMute, showFlash]);
-
-  const onVolumeChange = useCallback((e) => {
-    setVolume(Number(e.target.value));
-  }, [setVolume]);
-
-  const onPlayPause = useCallback(() => {
-    togglePlay();
-    showFlash(paused ? '▶ 再生' : '⏸ 一時停止');
-  }, [togglePlay, paused, showFlash]);
-
   const onOpenTwitch = useCallback(() => {
     if (!current) return;
     window.open(`https://twitch.tv/${current.user_login}`, '_blank', 'noopener,noreferrer');
@@ -137,7 +104,7 @@ export default function DpgkApp() {
 
   const { onTouchStart, onTouchEnd } = useZapControls({
     onPrev: prev, onNext: next, onFavorite, onVisited, onExclude, onClose,
-    onPlayPause, onMute, onOpenTwitch,
+    onOpenTwitch,
   });
 
   // --- 検索 ---
@@ -172,6 +139,11 @@ export default function DpgkApp() {
   }, [token]);
 
   const rootRef = useRef(null);
+  const reclaimFocus = useCallback(() => {
+    if (document.activeElement && document.activeElement.tagName === 'IFRAME') {
+      rootRef.current?.focus({ preventScroll: true });
+    }
+  }, []);
   useEffect(() => { rootRef.current?.focus({ preventScroll: true }); }, []);
 
   const chatSrc = useMemo(() => {
@@ -199,6 +171,8 @@ export default function DpgkApp() {
     <div
       className={`zap-overlay${showChat ? ' with-chat' : ''}`}
       ref={rootRef}
+      onMouseMove={reclaimFocus}
+      onMouseDown={reclaimFocus}
       tabIndex={-1}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
@@ -232,14 +206,6 @@ export default function DpgkApp() {
         <div className="zap-counter">{feed.length > 0 ? `${index + 1} / ${feed.length}` : '0 / 0'}</div>
         <button
           type="button"
-          className="zap-chat-toggle"
-          onClick={onPlayPause}
-          title="再生 / 一時停止 (Space)"
-        >
-          {paused ? '▶ 再生' : '⏸ 停止'}
-        </button>
-        <button
-          type="button"
           className={`zap-chat-toggle${showChat ? ' active' : ''}`}
           onClick={() => setShowChat((v) => !v)}
           title="チャットの表示/非表示"
@@ -253,6 +219,7 @@ export default function DpgkApp() {
         <div className="zap-search-panel">
           <SearchFilters
             settings={settings}
+            token={demoMode ? null : token}
             onChange={updateSettings}
             onSearch={handleSearch}
             onReset={handleReset}
@@ -267,15 +234,13 @@ export default function DpgkApp() {
           <>
             <div className="zap-main">
               <div className="zap-player">
-                <div id={playerId} className="zap-player-embed" />
-                {/* iframe にフォーカスを渡さない透明オーバーレイ。タップでミュート切替 */}
-                <div
-                  className="zap-player-overlay"
-                  onClick={onMute}
-                  title="タップでミュート切替"
+                <iframe
+                  key={current.user_login}
+                  src={playerSrc}
+                  allowFullScreen
+                  allow="autoplay; encrypted-media"
+                  title="Twitch DPGK player"
                 />
-                {muted && <div className="zap-mute-indicator">🔇</div>}
-                {paused && <div className="zap-pause-indicator">⏸</div>}
                 {flash && <div className="zap-flash">{flash}</div>}
               </div>
               <div className="zap-controls">
@@ -284,25 +249,6 @@ export default function DpgkApp() {
                 <button type="button" className="zap-ctrl visited" onClick={onVisited} title="既視聴 (←)">← 既視聴</button>
                 <button type="button" className="zap-ctrl fav" onClick={onFavorite} title="お気に入り (→)">お気に入り →</button>
                 <button type="button" className="zap-ctrl exclude" onClick={onExclude} title="除外 (Delete)">🚫 除外</button>
-                <button type="button" className="zap-ctrl mute" onClick={onMute} title="ミュート (M)">
-                  {muted ? '🔇 ミュート中' : '🔊 ミュート'}
-                </button>
-                <div className="zap-volume">
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={muted ? 0 : volume}
-                    onChange={onVolumeChange}
-                    tabIndex={-1}
-                    onMouseUp={(e) => e.currentTarget.blur()}
-                    onTouchEnd={(e) => e.currentTarget.blur()}
-                    className="zap-volume-slider"
-                    aria-label="音量"
-                    title="音量"
-                  />
-                </div>
                 <a
                   className="zap-ctrl open-twitch"
                   href={current ? `https://twitch.tv/${current.user_login}` : '#'}
@@ -341,7 +287,7 @@ export default function DpgkApp() {
       </div>
 
       <div className="zap-hint">
-        ↑ 前へ ・ ↓ 次へ ・ → お気に入り ・ ← 既視聴 ・ Delete 除外 ・ Space 再生/停止 ・ M ミュート ・ Enter Twitchで開く ・ Esc 戻る（スワイプ上下でも操作可）
+          ↑ 前へ ・ ↓ 次へ ・ → お気に入り ・ ← 既視聴 ・ Delete 除外 ・ Enter Twitchで開く ・ Esc 戻る（スワイプ上下でも操作可。再生・音量はTwitchプレイヤー本体のコントロールを使用）
       </div>
     </div>
   );

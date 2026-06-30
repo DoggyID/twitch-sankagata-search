@@ -1,3 +1,5 @@
+import { GameNameInput } from './GameNameInput.jsx';
+
 const LANGUAGES = [
   ['ja', '日本語 (Japanese)'],
   ['en', '英語 (English)'],
@@ -9,19 +11,24 @@ const LANGUAGES = [
   ['', 'すべての言語'],
 ];
 
-export default function SearchFilters({ settings, onChange, onSearch, onReset, onChaos, onZap, searching }) {
+export default function SearchFilters({ settings, onChange, onSearch, onReset, onChaos, onZap, searching, token }) {
   const set = (key) => (e) => onChange({ [key]: e.target.value });
 
   return (
     <>
       <div className="game-id-query-section">
         <h3>ゲームIDを名前で検索</h3>
-        <input
-          type="text"
-          id="gameNameInput"
+        <GameNameInput
           value={settings.gameName}
-          onChange={set('gameName')}
-          placeholder="例: Apex Legends"
+          token={token}
+          onSelect={(category) =>
+            onChange({
+              gameName: category.name,
+              gameId: category.id,
+              gameBoxArtUrl: category.box_art_url || '',
+            })
+          }
+          onChange={(text) => onChange({ gameName: text, gameId: '' })}
         />
       </div>
 
@@ -49,12 +56,28 @@ export default function SearchFilters({ settings, onChange, onSearch, onReset, o
             />
           </div>
           <div className="filter-group language-filter">
-            <label htmlFor="languageSelect">言語:</label>
-            <select id="languageSelect" value={settings.language} onChange={set('language')}>
-              {LANGUAGES.map(([v, label]) => (
-                <option key={v || 'all'} value={v}>{label}</option>
+            <label>言語:</label>
+            <div className="language-options">
+              {LANGUAGES.filter(([code]) => code !== '').map(([code, label]) => (
+                <label key={code} className="language-option">
+                  <input
+                    type="checkbox"
+                    checked={(settings.languages || []).includes(code)}
+                    onChange={(e) => {
+                      const current = settings.languages || [];
+                      const next = e.target.checked
+                        ? [...current, code]
+                        : current.filter((language) => language !== code);
+                      onChange({ languages: next });
+                    }}
+                  />
+                  <span>{label}</span>
+                </label>
               ))}
-            </select>
+            </div>
+            {(settings.languages || []).length === 0 && (
+              <p className="language-note">未選択の場合はすべての言語が対象になります</p>
+            )}
           </div>
           <div className="filter-group tag-filter">
             <div className="label-with-toggle">
