@@ -16,7 +16,7 @@ html, body {
 body { padding: var(--space-5); }
 
 .container {
-  max-width: 1280px;
+  max-width: min(1600px, 94vw);
   margin: 0 auto;
   background-color: var(--container-bg);
   padding: var(--space-5);
@@ -134,13 +134,17 @@ input:checked + .slider:before { transform: translateX(24px); }
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border-color-light);
 }
+.game-id-query-section {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+}
 .game-id-query-section input#gameNameInput {
-  display: block; width: 100%; max-width: 600px; margin-top: var(--space-2);
+  display: block; width: 100%; max-width: 380px; margin-top: var(--space-2);
 }
 .filter-options-fields { display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
 .filter-group { display: flex; flex-direction: column; }
 .filter-group label { font-weight: 600; margin-bottom: var(--space-2); font-size: 0.9rem; }
-.filter-group input, .filter-group select { width: 100%; }
+.filter-group input:not([type="checkbox"]), .filter-group select { width: 100%; }
 .label-with-toggle {
   display: flex; justify-content: space-between; align-items: center;
   width: 100%; min-height: 42px;
@@ -168,6 +172,11 @@ input:checked + .slider:before { transform: translateX(24px); }
   .filter-group.title-filter { grid-column: span 2; }
   .filter-group.viewers-filter, .filter-group.language-filter { grid-column: span 1; }
   .filter-group.tag-filter { grid-column: span 2; }
+}
+@media (min-width: 1440px) {
+  .filter-options-fields { grid-template-columns: repeat(6, 1fr); }
+  .filter-group.title-filter, .filter-group.tag-filter { grid-column: span 2; }
+  .filter-group.viewers-filter, .filter-group.language-filter, .filter-group.sort-order { grid-column: span 1; }
 }
 
 /* --- ボタン群 --- */
@@ -610,13 +619,65 @@ input:checked + .slider:before { transform: translateX(24px); }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 6px;
-  border-radius: 4px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
   font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.language-option input[type="checkbox"] {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: 0 0 16px;
+  border: 1px solid var(--input-border);
+  border-radius: 5px;
+  background: var(--input-bg);
+  cursor: pointer;
+  transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.language-option input[type="checkbox"]::before {
+  content: "";
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transform-origin: center;
+  transition: transform var(--transition);
+}
+
+.language-option input[type="checkbox"]:checked {
+  border-color: var(--twitch-purple);
+  background: var(--twitch-purple);
+}
+
+.language-option input[type="checkbox"]:checked::before {
+  transform: rotate(45deg) scale(1);
+}
+
+.language-option input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--twitch-purple-soft);
+}
+
+.language-option:has(input[type="checkbox"]:checked) {
+  background: var(--twitch-purple-soft);
+  color: var(--text-color);
 }
 
 .language-option:hover {
   background: var(--surface-2);
+}
+
+.language-option:has(input[type="checkbox"]:checked):hover {
+  background: var(--twitch-purple-soft);
 }
 
 .language-note {
