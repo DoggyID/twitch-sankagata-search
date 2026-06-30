@@ -16,7 +16,8 @@ html, body {
 body { padding: var(--space-5); }
 
 .container {
-  max-width: min(1600px, 94vw);
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
   background-color: var(--container-bg);
   padding: var(--space-5);
@@ -42,10 +43,12 @@ a:hover { text-decoration: underline; }
 input[type="text"],
 input[type="number"],
 select {
-  padding: 10px 12px;
+  height: 42px;
+  padding: 0 12px;
   border: 1px solid var(--input-border);
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
+  line-height: 1.2;
   background-color: var(--input-bg);
   color: var(--text-color);
   transition: border-color var(--transition), box-shadow var(--transition);
@@ -250,14 +253,21 @@ input:checked + .slider:before { transform: translateX(24px); }
 /* =========================================================
    配信カード
    ========================================================= */
-.stream-list { list-style: none; padding: 0; margin: 0; }
+.stream-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+}
 .stream-item {
-  display: flex; flex-direction: column; gap: var(--space-3);
+  display: flex; align-items: flex-start; gap: var(--space-3);
   background-color: var(--stream-item-bg);
   border: 1px solid var(--border-color-light);
   border-radius: var(--radius-md);
-  padding: var(--space-3);
-  margin-bottom: var(--space-4);
+  padding: var(--space-2);
+  margin: 0;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
@@ -267,7 +277,8 @@ input:checked + .slider:before { transform: translateX(24px); }
 .stream-item.visited { opacity: 0.7; }
 
 .thumbnail-wrapper {
-  width: 100%; aspect-ratio: 16 / 9; position: relative;
+  width: clamp(150px, 34%, 220px); aspect-ratio: 16 / 9; position: relative;
+  flex: 0 0 clamp(150px, 34%, 220px);
   overflow: hidden; border-radius: var(--radius-sm); background: #000;
 }
 .thumbnail-wrapper img.thumbnail {
@@ -286,9 +297,9 @@ input:checked + .slider:before { transform: translateX(24px); }
   padding: 2px 8px; border-radius: var(--radius-sm);
 }
 
-.stream-info { display: flex; flex-direction: column; min-width: 0; gap: var(--space-1); }
+.stream-info { display: flex; flex-direction: column; min-width: 0; gap: var(--space-1); padding-top: 2px; }
 .stream-title {
-  margin: 0; font-size: 1rem; line-height: 1.35; color: var(--stream-title-color);
+  margin: 0; font-size: 0.95rem; line-height: 1.3; color: var(--stream-title-color);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .streamer-line { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; color: var(--stream-info-color); flex-wrap: wrap; }
@@ -311,9 +322,9 @@ input:checked + .slider:before { transform: translateX(24px); }
    結果 + プレビュー（2カラム）
    ========================================================= */
 .results-with-preview { display: flex; gap: var(--space-4); align-items: flex-start; }
-.results-main { flex: 1 1 40%; min-width: 0; }
+.results-main { flex: 1 1 58%; min-width: 0; }
 .preview-panel {
-  flex: 1 1 60%; min-width: 0; position: sticky; top: var(--space-3);
+  flex: 1 1 42%; min-width: 0; position: sticky; top: var(--space-3);
   max-height: calc(100vh - 24px); overflow-y: auto;
   background-color: var(--surface-2); border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm); padding: var(--space-3);
@@ -360,9 +371,10 @@ input:checked + .slider:before { transform: translateX(24px); }
 .visited-item .visited-info a:hover { color: var(--twitch-purple); }
 .visited-item .visited-meta { font-size: 0.8rem; color: var(--text-muted); margin-left: 10px; }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .results-with-preview { flex-direction: column; }
-  .preview-panel { width: 100%; position: sticky; top: 0; max-height: 70vh; z-index: 10; }
+  .results-main { order: 2; width: 100%; }
+  .preview-panel { order: 1; width: 100%; position: sticky; top: 0; max-height: 70vh; z-index: 10; }
 }
 
 /* =========================================================
@@ -574,7 +586,8 @@ input:checked + .slider:before { transform: translateX(24px); }
   gap: var(--space-2);
   width: 100%;
   max-width: 280px;
-  padding: 10px 12px;
+  min-height: 42px;
+  padding: 0 12px;
   border: 1px solid var(--input-border);
   border-radius: var(--radius-sm);
   background-color: var(--input-bg);
