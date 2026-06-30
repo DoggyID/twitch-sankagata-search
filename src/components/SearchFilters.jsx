@@ -1,4 +1,5 @@
 import { GameNameInput } from './GameNameInput.jsx';
+import { LanguageSelect } from './LanguageSelect.jsx';
 
 const LANGUAGES = [
   ['ja', '日本語 (Japanese)'],
@@ -57,27 +58,11 @@ export default function SearchFilters({ settings, onChange, onSearch, onReset, o
           </div>
           <div className="filter-group language-filter">
             <label>言語:</label>
-            <div className="language-options">
-              {LANGUAGES.filter(([code]) => code !== '').map(([code, label]) => (
-                <label key={code} className="language-option">
-                  <input
-                    type="checkbox"
-                    checked={(settings.languages || []).includes(code)}
-                    onChange={(e) => {
-                      const current = settings.languages || [];
-                      const next = e.target.checked
-                        ? [...current, code]
-                        : current.filter((language) => language !== code);
-                      onChange({ languages: next });
-                    }}
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
-            </div>
-            {(settings.languages || []).length === 0 && (
-              <p className="language-note">未選択の場合はすべての言語が対象になります</p>
-            )}
+            <LanguageSelect
+              languages={settings.languages || []}
+              options={LANGUAGES.filter(([code]) => code !== '')}
+              onChange={(next) => onChange({ languages: next })}
+            />
           </div>
           <div className="filter-group tag-filter">
             <div className="label-with-toggle">

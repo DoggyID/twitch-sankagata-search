@@ -513,10 +513,10 @@ input:checked + .slider:before { transform: translateX(24px); }
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  border: 1px solid var(--border-color, #3a3a46);
-  border-radius: 6px;
-  background: var(--surface-color, #181820);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 24%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-md);
 }
 
 .game-suggest-list {
@@ -540,36 +540,87 @@ input:checked + .slider:before { transform: translateX(24px); }
 
 .game-suggest-item:hover,
 .game-suggest-item:focus-visible {
-  background: var(--hover-color, rgb(255 255 255 / 8%));
+  background: var(--surface-2);
   outline: none;
 }
 
 .game-suggest-loading {
   padding: 8px 10px;
-  color: var(--muted-text-color, #a8a8b3);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
+
 .language-filter {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  position: relative;
 }
 
-.language-options {
+.language-select {
+  position: relative;
+}
+
+.language-select-trigger {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 280px;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.language-select-trigger[aria-expanded="true"] {
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 3px var(--twitch-purple-soft);
+}
+
+.language-select-summary {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.language-select-caret {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.language-select-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 220px;
+  padding: var(--space-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .language-option {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
   font-size: 0.9rem;
 }
 
+.language-option:hover {
+  background: var(--surface-2);
+}
+
 .language-note {
-  margin: 0;
+  margin: var(--space-1) 0 0;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
