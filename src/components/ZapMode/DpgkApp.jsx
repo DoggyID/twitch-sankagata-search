@@ -11,6 +11,7 @@ import { homeUrl } from '../../dpgkNav.js';
 import SearchFilters from '../SearchFilters.jsx';
 import { useZapControls } from './useZapControls.js';
 import { useFeed } from '../../hooks/useFeed.js';
+import { usePlayerPool } from './usePlayerPool.js';
 
 const DEMO_PARAM = new URLSearchParams(window.location.search).get('demo') === '1';
 
@@ -30,6 +31,7 @@ export default function DpgkApp() {
   const [flash, setFlash] = useState(null);
   const [showChat, setShowChat] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
+  const [poolResetKey, setPoolResetKey] = useState(0);
 
   const authed = !!token || demoMode;
 
@@ -37,8 +39,9 @@ export default function DpgkApp() {
   // 既視聴・除外は常に除外。これにより前へ戻っても既視聴済みは出てこない。
   const { favList, othersList, counts } = useFeed(search.streams, channels, visited);
   const feed = useMemo(() => (source === 'favorites' ? favList : othersList), [source, favList, othersList]);
+  const safeIndex = feed.length === 0 ? 0 : Math.min(index, feed.length - 1);
 
-  const current = feed[index] || null;
+  const current = feed[safeIndex] || null;
 
   // フィードが縮んで index がはみ出したら詰める（末尾を操作した時など）
   useEffect(() => {
@@ -60,6 +63,11 @@ export default function DpgkApp() {
     if (!current) return '';
     return `https://player.twitch.tv/?channel=${encodeURIComponent(current.user_login)}&parent=${encodeURIComponent(PLAYER_PARENT)}&muted=false&autoplay=true`;
   }, [current]);
+  const playerPool = usePlayerPool(feed, safeIndex, {
+    enabled: authed,
+    parent: PLAYER_PARENT,
+    resetKey: poolResetKey,
+  });
 
   // --- ナビゲーション ---
   const next = useCallback(() => {
@@ -100,6 +108,7 @@ export default function DpgkApp() {
   const switchSource = useCallback((src) => {
     setSource(src);
     setIndex(0);
+    setPoolResetKey((key) => key + 1);
   }, []);
 
   const { onTouchStart, onTouchEnd } = useZapControls({
@@ -112,6 +121,7 @@ export default function DpgkApp() {
     if (demoMode) search.searchDemo(settings);
     else search.searchReal(token, settings);
     setIndex(0);
+    setPoolResetKey((key) => key + 1);
   }, [demoMode, search, settings, token]);
 
   const handleReset = useCallback(() => {
@@ -203,7 +213,7 @@ export default function DpgkApp() {
             ⭐ お気に入り ({counts.fav})
           </button>
         </div>
-        <div className="zap-counter">{feed.length > 0 ? `${index + 1} / ${feed.length}` : '0 / 0'}</div>
+        <div className="zap-counter">{feed.length > 0 ? `${safeIndex + 1} / ${feed.length}` : '0 / 0'}</div>
         <button
           type="button"
           className={`zap-chat-toggle${showChat ? ' active' : ''}`}
@@ -230,10 +240,10 @@ export default function DpgkApp() {
       )}
 
       <div className="zap-body">
-        {current ? (
-          <>
-            <div className="zap-main">
-              <div className="zap-player">
+        <div className="zap-main">
+          <div className={`zap-player${current ? '' : ' empty'}${playerPool.scriptError ? ' fallback' : ''}`}>
+            {playerPool.scriptError ? (
+              playerSrc && (
                 <iframe
                   key={current.user_login}
                   src={playerSrc}
@@ -241,8 +251,32 @@ export default function DpgkApp() {
                   allow="autoplay; encrypted-media"
                   title="Twitch DPGK player"
                 />
-                {flash && <div className="zap-flash">{flash}</div>}
+              )
+            ) : (
+              <div className="zap-player-pool" aria-hidden={!current}>
+                {playerPool.slots.map((slot) => (
+                  <div
+                    key={slot.key}
+                    id={slot.containerId}
+                    className={`zap-player-slot ${slot.role}`}
+                    data-login={slot.login || ''}
+                    data-ready={slot.ready ? 'true' : 'false'}
+                    data-playing={slot.playing ? 'true' : 'false'}
+                  />
+                ))}
               </div>
+            )}
+            {!current && (
+              <div className="zap-empty">
+                <p>表示できる配信がありません。</p>
+                <p>🔍 検索で配信を探すか、上のボタンでリストを切り替えてください。</p>
+              </div>
+            )}
+            {flash && <div className="zap-flash">{flash}</div>}
+          </div>
+
+          {current && (
+            <>
               <div className="zap-controls">
                 <button type="button" className="zap-ctrl prev" onClick={prev} title="前へ (↑)">↑ 前へ</button>
                 <button type="button" className="zap-ctrl next" onClick={next} title="次へ (↓)">↓ 次へ</button>
@@ -271,17 +305,12 @@ export default function DpgkApp() {
                   </div>
                 )}
               </div>
-            </div>
-            {showChat && (
-              <div className="zap-chat">
-                <iframe key={`chat-${current.user_login}`} src={chatSrc} title="Twitch chat" />
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="zap-empty">
-            <p>表示できる配信がありません。</p>
-            <p>🔍 検索で配信を探すか、上のボタンでリストを切り替えてください。</p>
+            </>
+          )}
+        </div>
+        {current && showChat && (
+          <div className="zap-chat">
+            <iframe key={`chat-${current.user_login}`} src={chatSrc} title="Twitch chat" />
           </div>
         )}
       </div>
