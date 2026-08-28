@@ -1,7 +1,13 @@
 # Cloudflare Pages のヘッダ設定（dist 直下にそのままコピーされる）。
 # HTML はキャッシュさせない = デプロイ直後にリロードすれば必ず新版が出る。
 # JS/CSS はファイル名にハッシュが入るので永続キャッシュで問題ない。
+#
+# 注意: Cloudflare Pages は /dpgk.html を /dpgk へ 308 リダイレクトして配信する。
+# 拡張子なしのパスは /*.html にマッチしないので、実体のあるページを個別に列挙している。
 /
+  Cache-Control: no-store
+
+/dpgk
   Cache-Control: no-store
 
 /*.html

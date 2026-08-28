@@ -101,6 +101,12 @@ npm run deploy:preview
   `dist/_headers` がアップロードされているか確認する（`npm run build` 後に
   `dist/_headers` が存在すること）。`public/` 配下は Vite が dist 直下へコピーする。
 
+- **URL が `/dpgk.html` ではなく `/dpgk` になる**
+  Cloudflare Pages の既定動作で、`.html` 付き URL は拡張子なしのパスへ 308 リダイレクトされる
+  （クエリは保持される）。アプリ内リンクは `dpgk.html` のままで正しく動く。
+  ただし拡張子なしのパスは `_headers` の `/*.html` にマッチしないため、
+  `public/_headers` では `/dpgk` を個別に列挙している。ページを増やしたら同様に追記すること。
+
 - **配信プレイヤーが真っ黒**
   Twitch 埋め込みの `parent` は `window.location.hostname` から自動で入る（`src/config.js`）。
   独自ドメインを足した場合もコード変更は不要。
