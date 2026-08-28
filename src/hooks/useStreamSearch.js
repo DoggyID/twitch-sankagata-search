@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
-import { getGameByName, fetchAllStreams, fetchUserProfiles, filterStreams, sortStreams } from '../api/twitch.js';
+import { getGameByName, fetchStreams, fetchUserProfiles, filterStreams, sortStreams } from '../api/twitch.js';
 import { MOCK_STREAMS } from '../mock/mockStreams.js';
+
+// 条件に一致した配信がこの件数に達したらページ取得を打ち切る。
+// 一覧をざっと眺める用途ではこれで足り、残りのページを引く時間がまるごと浮く。
+const DEFAULT_TARGET_MATCHES = 200;
 
 // 検索の実行ロジック（本体の検索画面と DPGK ページで共有）。
 // streams / gameInfo / status / searching を管理し、デモ・実データ両対応。
@@ -30,7 +34,7 @@ export function useStreamSearch(initialStreams = []) {
     }
     setSearching(true);
     setStatus('');
-    let capNote = '';
+    let note = '';
     try {
       setGameInfo({ loading: `「${gameName}」のIDを検索中...` });
       const game = settings.gameId
@@ -43,30 +47,49 @@ export function useStreamSearch(initialStreams = []) {
       }
       setGameInfo({ ...game });
 
-      setStatus(`ゲームID「${game.id}」で配信を検索中...`);
-      const { streams: all, capped } = await fetchAllStreams(token, game.id, settings.languages, (count) => {
-        setStatus(`配信を検索中... (現在${count}件取得済み)`);
-      });
-      capNote = capped ? ' 取得上限（1000件）に達したため、これ以上のページ取得を打ち切りました。視聴者数の多い順に取得しているため、人気配信は含まれています。' : '';
+      // Twitch は viewer_count 降順で返す。
+      // 「多い順」なら欲しいものが先頭から並ぶので、必要数が集まった時点で止めてよい。
+      // 「少ない順」は答えが最後のページにあるため、途中で止めると結果が変わってしまう。
+      const canStopEarly = (settings.sortOrder || 'desc') !== 'asc';
+      const targetMatches = settings.targetMatches ?? DEFAULT_TARGET_MATCHES;
 
-      let filtered = sortStreams(filterStreams(all, settings), settings.sortOrder);
+      // 1ページ取るたびに絞り込む。全件そろうのを待たずに一致分を積み上げていく。
+      const matches = [];
+      setStatus(`ゲームID「${game.id}」で配信を検索中...`);
+      const { fetched, capped, stoppedEarly } = await fetchStreams(token, game.id, settings.languages, {
+        onPage: (page, total) => {
+          matches.push(...filterStreams(page, settings));
+          setStatus(`検索中... ${total}件を確認、${matches.length}件が条件に一致`);
+          setStreams(sortStreams(matches, settings.sortOrder));
+          return !(canStopEarly && matches.length >= targetMatches);
+        },
+      });
+
+      if (stoppedEarly) {
+        note = ` 一致が${targetMatches}件に達したため、${fetched}件を調べた時点で打ち切りました。視聴者数の多い順に調べているため、上位の配信は含まれています。`;
+      } else if (capped) {
+        note = ' 取得上限（1000件）に達したため、これ以上のページ取得を打ち切りました。視聴者数の多い順に取得しているため、人気配信は含まれています。';
+      }
+
+      let filtered = sortStreams(matches, settings.sortOrder);
+      setStreams(filtered);
 
       if (filtered.length > 0) {
         setStatus(`${filtered.length}件の配信が見つかりました。配信者のアイコンを取得中...`);
         const userIds = [...new Set(filtered.map((s) => s.user_id))];
         const profiles = await fetchUserProfiles(token, userIds);
         filtered = filtered.map((s) => ({ ...s, profile_image_url: profiles[s.user_id] }));
+        setStreams(filtered);
         setStatus(`${filtered.length}件の配信が見つかりました。`);
       } else {
         setStatus('0件の配信が見つかりました。指定された条件に一致するライブ配信は見つかりませんでした。');
       }
-      setStreams(filtered);
     } catch (err) {
       console.error('検索エラー:', err);
       setStatus(`エラーが発生しました: ${err.message}`);
     } finally {
-      if (capNote) {
-        setStatus((current) => `${current}${capNote}`);
+      if (note) {
+        setStatus((current) => `${current}${note}`);
       }
       setSearching(false);
     }

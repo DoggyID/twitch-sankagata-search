@@ -7,23 +7,50 @@ function headers(token) {
   return { Authorization: `Bearer ${token}`, 'Client-ID': CLIENT_ID };
 }
 
-// ゲーム名 → ゲーム情報（{id, name, box_art_url}）。見つからなければ null
-export async function getGameByName(token, name) {
-  const res = await fetch(`${HELIX}/games?name=${encodeURIComponent(name)}`, { headers: headers(token) });
+// Helix は 800ポイント/分（≒13リクエスト/秒）。検索1回のページングは多くても20回程度で、
+// 通常は上限にまったく触れない。そのため待ち時間は固定で入れず、
+// 実際に 429 が返ったときだけ Ratelimit-Reset に従って待つ。
+async function helixFetch(token, url, retries = 2) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { headers: headers(token) });
+    if (res.status !== 429 || attempt >= retries) return res;
+    const reset = Number(res.headers.get('Ratelimit-Reset'));
+    const waitMs = Number.isFinite(reset) && reset > 0
+      ? Math.max(0, reset * 1000 - Date.now()) + 100
+      : 1000 * (attempt + 1);
+    await new Promise((r) => setTimeout(r, Math.min(waitMs, 5000)));
+  }
+}
+
+async function helixJson(token, url, errorMessage) {
+  const res = await helixFetch(token, url);
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(`Error ${res.status}: ${data.message || 'ゲーム情報の取得に失敗しました。'}`);
+    throw new Error(`Error ${res.status}: ${data.message || errorMessage}`);
   }
+  return data;
+}
+
+// ゲーム名 → ゲーム情報（{id, name, box_art_url}）。見つからなければ null
+export async function getGameByName(token, name) {
+  const data = await helixJson(
+    token,
+    `${HELIX}/games?name=${encodeURIComponent(name)}`,
+    'ゲーム情報の取得に失敗しました。'
+  );
   return data.data && data.data.length > 0 ? data.data[0] : null;
 }
 
-// game_id のライブ配信をページングで取得。Twitchはviewer_count降順で返すため、上限到達で打ち切っても人気配信は失われない。
-export async function fetchAllStreams(token, gameId, languages, onProgress, opts = {}) {
-  let all = [];
+// game_id のライブ配信を1ページ100件ずつ取得し、ページごとに onPage へ渡す。
+// onPage が false を返した時点で打ち切る（呼び出し側が「もう十分」と判断できるようにするため）。
+// Twitch は viewer_count 降順で返すので、降順表示なら先頭から必要数を集めた時点で止めてよい。
+export async function fetchStreams(token, gameId, languages, opts = {}) {
+  const { maxStreams = DEFAULT_MAX_STREAMS, onPage } = opts;
   let cursor = null;
-  let page = 1;
+  let fetched = 0;
   let capped = false;
-  const maxStreams = opts.maxStreams ?? DEFAULT_MAX_STREAMS;
+  let stoppedEarly = false;
+
   do {
     let url = `${HELIX}/streams?game_id=${encodeURIComponent(gameId)}&first=100`;
     if (Array.isArray(languages)) {
@@ -33,37 +60,39 @@ export async function fetchAllStreams(token, gameId, languages, onProgress, opts
     }
     if (cursor) url += `&after=${cursor}`;
 
-    const res = await fetch(url, { headers: headers(token) });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(`Error ${res.status}: ${err.message || 'ストリーム情報の取得に失敗しました。'}`);
-    }
-    const data = await res.json();
-    if (data.data && data.data.length > 0) all.push(...data.data);
-    if (all.length >= maxStreams) {
-      all = all.slice(0, maxStreams);
-      capped = true;
-      break;
-    }
+    const data = await helixJson(token, url, 'ストリーム情報の取得に失敗しました。');
+    const page = data.data || [];
+    fetched += page.length;
+
+    const wantMore = onPage ? (await onPage(page, fetched)) !== false : true;
+
+    if (fetched >= maxStreams) { capped = true; break; }
+    if (!wantMore) { stoppedEarly = true; break; }
+
     cursor = data.pagination?.cursor;
-    if (onProgress) onProgress(all.length, page);
-    if (cursor) await new Promise((r) => setTimeout(r, 300));
-    page++;
   } while (cursor);
-  return { streams: all, capped };
+
+  return { fetched, capped, stoppedEarly };
 }
 
-// user_id[] → { user_id: profile_image_url } を100件ずつ取得
+// user_id[] → { user_id: profile_image_url }。100件ずつに割ってまとめて投げる。
+// バッチ同士に依存関係はないので直列に待つ理由がない。
 export async function fetchUserProfiles(token, userIds) {
+  const batches = [];
+  for (let i = 0; i < userIds.length; i += 100) batches.push(userIds.slice(i, i + 100));
+
+  const pages = await Promise.all(
+    batches.map(async (batch) => {
+      const url = `${HELIX}/users?` + batch.map((id) => `id=${id}`).join('&');
+      const res = await helixFetch(token, url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.data || [];
+    })
+  );
+
   const profiles = {};
-  for (let i = 0; i < userIds.length; i += 100) {
-    const batch = userIds.slice(i, i + 100);
-    const url = `${HELIX}/users?` + batch.map((id) => `id=${id}`).join('&');
-    const res = await fetch(url, { headers: headers(token) });
-    const data = await res.json();
-    if (data.data) data.data.forEach((u) => { profiles[u.id] = u.profile_image_url; });
-    if (i + 100 < userIds.length) await new Promise((r) => setTimeout(r, 300));
-  }
+  pages.flat().forEach((u) => { profiles[u.id] = u.profile_image_url; });
   return profiles;
 }
 
