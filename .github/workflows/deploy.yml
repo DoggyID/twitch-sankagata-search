@@ -1,5 +1,7 @@
 name: Deploy to GitHub Pages
 
+# 旧環境。Cloudflare Pages (deploy-cloudflare.yml) が安定したら削除する。
+
 on:
   push:
     branches: [main]
@@ -26,6 +28,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # GitHub Pages はリポジトリ名がパスに入る（Cloudflare Pages はルート配信なので不要）
+          BASE_PATH: /twitch-sankagata-search/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

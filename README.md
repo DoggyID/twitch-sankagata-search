@@ -1,6 +1,9 @@
 # Twitch ライブ配信検索 ＋ DPGKモード
 
-▶ **公開サイト: <https://doggyid.github.io/twitch-sankagata-search/>**（`main` への push で自動更新）
+▶ **公開サイト: <https://twitch-sankagata-search.pages.dev/>**（Cloudflare Pages）
+
+デプロイは `npm run deploy` で約15秒。手順とプレビュー環境については [DEPLOY.md](DEPLOY.md) を参照。
+旧環境の <https://doggyid.github.io/twitch-sankagata-search/>（GitHub Pages）も当面は並行運用する。
 
 Twitch のライブ配信を **ゲーム名・タグ・タイトル・視聴者数・言語** で細かく絞り込んで探せる Web アプリです。
 気になった配信者の **お気に入り / 除外 / 既視聴** を管理でき、見つけた配信は **DPGKモード** で
@@ -106,5 +109,7 @@ twitch-sankagata-search/
 │   ├── api/twitch.js              Twitch Helix API
 │   ├── mock/mockStreams.js        デモ用データ
 │   └── styles/                    theme.css（Twitch風デザイン）+ app.css
+├── public/_headers               Cloudflare Pages のキャッシュ設定（HTMLは no-store）
+├── wrangler.toml                 Cloudflare Pages プロジェクト設定
 └── 起動.ps1                       ローカル起動スクリプト
 ```

@@ -1,0 +1,5 @@
+# Cloudflare Pages（Direct Upload）用の設定。
+# これがあるので `wrangler pages deploy` を引数なしで実行できる。
+name = "twitch-sankagata-search"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-08-28"
