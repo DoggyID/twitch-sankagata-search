@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react';
 import { getGameByName, fetchStreams, fetchUserProfiles, filterStreams, sortStreams } from '../api/twitch.js';
 import { MOCK_STREAMS } from '../mock/mockStreams.js';
 
-// 条件に一致した配信がこの件数に達したらページ取得を打ち切る。
-// 一覧をざっと眺める用途ではこれで足り、残りのページを引く時間がまるごと浮く。
-const DEFAULT_TARGET_MATCHES = 200;
+// 空欄・0・不正値は「打ち切らない」の意味にする
+function toPositiveInt(value) {
+  const n = parseInt((value ?? '').toString().trim(), 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
 
 // 検索の実行ロジック（本体の検索画面と DPGK ページで共有）。
 // streams / gameInfo / status / searching を管理し、デモ・実データ両対応。
@@ -22,7 +24,7 @@ export function useStreamSearch(initialStreams = []) {
     return filtered;
   }, []);
 
-  const searchReal = useCallback(async (token, settings) => {
+  const searchReal = useCallback(async (token, settings, options = {}) => {
     if (!token) {
       setStatus('エラー: Twitch認証が完了していません。');
       return;
@@ -51,17 +53,31 @@ export function useStreamSearch(initialStreams = []) {
       // 「多い順」なら欲しいものが先頭から並ぶので、必要数が集まった時点で止めてよい。
       // 「少ない順」は答えが最後のページにあるため、途中で止めると結果が変わってしまう。
       const canStopEarly = (settings.sortOrder || 'desc') !== 'asc';
-      const targetMatches = settings.targetMatches ?? DEFAULT_TARGET_MATCHES;
+      const targetMatches = toPositiveInt(settings.targetMatches);
+
+      // API 側で絞れる分はすべてクエリに載せる（完全一致のみ・あいまい検索は挟まらない）。
+      const favorites = options.favorites || [];
+      const useFavorites = !!settings.onlyFavorites && favorites.length > 0;
+      const query = {
+        gameIds: [game.id],
+        languages: settings.languages,
+        userLogins: useFavorites ? favorites : [],
+        type: 'live',
+      };
+
+      // user_login と game_id を同時に渡したときの結合規則を実APIで確認できていないため、
+      // 取りこぼしではなく取りすぎ側に倒れても平気なようにゲーム一致をこちらでも確認する。
+      const matchesQuery = (s) => !useFavorites || !game.id || String(s.game_id) === String(game.id);
 
       // 1ページ取るたびに絞り込む。全件そろうのを待たずに一致分を積み上げていく。
       const matches = [];
       setStatus(`ゲームID「${game.id}」で配信を検索中...`);
-      const { fetched, capped, stoppedEarly } = await fetchStreams(token, game.id, settings.languages, {
+      const { fetched, capped, stoppedEarly } = await fetchStreams(token, query, {
         onPage: (page, total) => {
-          matches.push(...filterStreams(page, settings));
+          matches.push(...filterStreams(page.filter(matchesQuery), settings));
           setStatus(`検索中... ${total}件を確認、${matches.length}件が条件に一致`);
           setStreams(sortStreams(matches, settings.sortOrder));
-          return !(canStopEarly && matches.length >= targetMatches);
+          return !(canStopEarly && targetMatches && matches.length >= targetMatches);
         },
       });
 

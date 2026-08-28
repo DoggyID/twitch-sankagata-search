@@ -748,3 +748,26 @@ input:checked + .slider:before { transform: translateX(24px); }
   color: var(--text-muted);
   font-size: 0.8rem;
 }
+
+/* 検索オプションのチェックボックス（お気に入りだけを検索） */
+.filter-group .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-group .checkbox-label input[type='checkbox'] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+.filter-group .checkbox-label input[type='checkbox']:disabled {
+  cursor: not-allowed;
+}
+
+.filter-group .checkbox-label input[type='checkbox']:disabled + span {
+  opacity: 0.5;
+}

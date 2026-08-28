@@ -60,8 +60,8 @@ export default function App() {
   // --- 検索 ---
   const handleSearch = useCallback(() => {
     if (demoMode) searchDemo(settings);
-    else searchReal(token, settings);
-  }, [demoMode, searchDemo, searchReal, token, settings]);
+    else searchReal(token, settings, { favorites: channels.favorites });
+  }, [demoMode, searchDemo, searchReal, token, settings, channels.favorites]);
 
   const handleReset = useCallback(() => {
     if (!confirm('既視聴履歴をクリアしますか？\n(検索条件・お気に入り・除外リストは保持されます)')) return;
@@ -117,6 +117,7 @@ export default function App() {
             onChaos={activateChaos}
             onZap={openDpgk}
             searching={searching}
+            favoriteCount={channels.favorites.length}
           />
 
           <ChannelManagement channels={channels} nameCache={nameCache} />

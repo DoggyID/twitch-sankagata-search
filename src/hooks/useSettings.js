@@ -14,6 +14,10 @@ const DEFAULTS = {
   sortOrder: 'desc',
   tagLogic: 'OR',
   preloadCount: 1,
+  // 条件に一致した配信がこの件数に達したらページ取得を打ち切る。空欄なら打ち切らない。
+  targetMatches: 200,
+  // お気に入りの配信者だけをクエリに含める（user_login で絞るのでページングがほぼ1回で済む）
+  onlyFavorites: false,
 };
 
 // 検索条件の保存/復元（変更のたびに localStorage へ反映）。

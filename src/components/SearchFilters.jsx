@@ -12,7 +12,7 @@ const LANGUAGES = [
   ['', 'すべての言語'],
 ];
 
-export default function SearchFilters({ settings, onChange, onSearch, onReset, onChaos, onZap, searching, token }) {
+export default function SearchFilters({ settings, onChange, onSearch, onReset, onChaos, onZap, searching, token, favoriteCount = 0 }) {
   const set = (key) => (e) => onChange({ [key]: e.target.value });
 
   return (
@@ -106,6 +106,29 @@ export default function SearchFilters({ settings, onChange, onSearch, onReset, o
               <option value="desc">視聴者数が多い順</option>
               <option value="asc">視聴者数が少ない順</option>
             </select>
+          </div>
+          <div className="filter-group viewers-filter">
+            <label htmlFor="targetMatchesInput">取得件数 (空欄は打ち切りなし):</label>
+            <input
+              type="number"
+              id="targetMatchesInput"
+              min="1"
+              value={settings.targetMatches ?? ''}
+              onChange={set('targetMatches')}
+              placeholder="例: 200"
+            />
+          </div>
+          <div className="filter-group favorites-filter">
+            <label htmlFor="onlyFavoritesInput" className="checkbox-label">
+              <input
+                type="checkbox"
+                id="onlyFavoritesInput"
+                checked={!!settings.onlyFavorites}
+                disabled={favoriteCount === 0}
+                onChange={(e) => onChange({ onlyFavorites: e.target.checked })}
+              />
+              <span>お気に入りだけを検索 ({favoriteCount}人)</span>
+            </label>
           </div>
         </div>
       </div>

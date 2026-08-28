@@ -41,10 +41,36 @@ export async function getGameByName(token, name) {
   return data.data && data.data.length > 0 ? data.data[0] : null;
 }
 
-// game_id のライブ配信を1ページ100件ずつ取得し、ページごとに onPage へ渡す。
+// Helix が「検索クエリ」として受け付ける構造化パラメータはこれだけ。
+// いずれもID・コード値の完全一致で、あいまい検索は挟まらない。
+// 同じキーの繰り返しは OR、違うキー同士は AND で効く。
+// タイトル・タグ・視聴者数に相当するパラメータは存在しないため、そこはクライアント側で絞る。
+const HELIX_MAX_VALUES = 100;
+
+function appendAll(params, key, values) {
+  if (!Array.isArray(values)) return 0;
+  const list = values.filter(Boolean).slice(0, HELIX_MAX_VALUES);
+  list.forEach((v) => params.append(key, v));
+  return list.length;
+}
+
+export function buildStreamsUrl(query = {}, cursor = null) {
+  const { gameIds, languages, userLogins, userIds, type = 'live' } = query;
+  const params = new URLSearchParams();
+  params.set('first', '100');
+  if (type) params.set('type', type);
+  appendAll(params, 'game_id', gameIds);
+  appendAll(params, 'language', languages);
+  appendAll(params, 'user_login', userLogins);
+  appendAll(params, 'user_id', userIds);
+  if (cursor) params.set('after', cursor);
+  return `${HELIX}/streams?${params.toString()}`;
+}
+
+// ライブ配信を1ページ100件ずつ取得し、ページごとに onPage へ渡す。
 // onPage が false を返した時点で打ち切る（呼び出し側が「もう十分」と判断できるようにするため）。
 // Twitch は viewer_count 降順で返すので、降順表示なら先頭から必要数を集めた時点で止めてよい。
-export async function fetchStreams(token, gameId, languages, opts = {}) {
+export async function fetchStreams(token, query, opts = {}) {
   const { maxStreams = DEFAULT_MAX_STREAMS, onPage } = opts;
   let cursor = null;
   let fetched = 0;
@@ -52,21 +78,14 @@ export async function fetchStreams(token, gameId, languages, opts = {}) {
   let stoppedEarly = false;
 
   do {
-    let url = `${HELIX}/streams?game_id=${encodeURIComponent(gameId)}&first=100`;
-    if (Array.isArray(languages)) {
-      languages.filter(Boolean).forEach((language) => {
-        url += `&language=${encodeURIComponent(language)}`;
-      });
-    }
-    if (cursor) url += `&after=${cursor}`;
-
+    const url = buildStreamsUrl(query, cursor);
     const data = await helixJson(token, url, 'ストリーム情報の取得に失敗しました。');
     const page = data.data || [];
     fetched += page.length;
 
     const wantMore = onPage ? (await onPage(page, fetched)) !== false : true;
 
-    if (fetched >= maxStreams) { capped = true; break; }
+    if (maxStreams && fetched >= maxStreams) { capped = true; break; }
     if (!wantMore) { stoppedEarly = true; break; }
 
     cursor = data.pagination?.cursor;

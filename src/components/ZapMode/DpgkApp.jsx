@@ -132,10 +132,10 @@ export default function DpgkApp() {
   // --- 検索 ---
   const handleSearch = useCallback(() => {
     if (demoMode) search.searchDemo(settings);
-    else search.searchReal(token, settings);
+    else search.searchReal(token, settings, { favorites: channels.favorites });
     setIndex(0);
     setPoolResetKey((key) => key + 1);
-  }, [demoMode, search, settings, token]);
+  }, [demoMode, search, settings, token, channels.favorites]);
 
   const handleReset = useCallback(() => {
     if (!confirm('既視聴履歴をクリアしますか？\n(検索条件・お気に入り・除外リストは保持されます)')) return;
@@ -156,7 +156,7 @@ export default function DpgkApp() {
     if (demoMode) { didAuto.current = true; search.searchDemo(settings); return; }
     if (token && search.streams.length === 0 && settings.gameName.trim()) {
       didAuto.current = true;
-      search.searchReal(token, settings);
+      search.searchReal(token, settings, { favorites: channels.favorites });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
