@@ -94,6 +94,44 @@ export async function fetchStreams(token, query, opts = {}) {
   return { fetched, capped, stoppedEarly };
 }
 
+// user_id[] → いまライブ中の配信だけを返す。
+// Helix は「ライブでないチャンネルは応答に含めない」ので、
+// 投げたIDのうち返ってこなかったものがオフライン。
+// 1リクエストに100IDまで載るため、1000チャンネルでも10リクエストで済む。
+export async function fetchLiveStreamsByUserIds(token, userIds) {
+  const ids = [...new Set((userIds || []).filter(Boolean))];
+  const batches = [];
+  for (let i = 0; i < ids.length; i += HELIX_MAX_VALUES) {
+    batches.push(ids.slice(i, i + HELIX_MAX_VALUES));
+  }
+
+  const results = await Promise.all(
+    batches.map(async (batch) => {
+      // user_id だけで引く。game_id を混ぜると結合規則に依存するため、
+      // ゲームやタイトルの絞り込みは取得後にこちらでかける。
+      const url = buildStreamsUrl({ userIds: batch });
+      try {
+        const res = await helixFetch(token, url);
+        if (!res.ok) return { batch, streams: null };
+        const data = await res.json();
+        return { batch, streams: data.data || [] };
+      } catch {
+        return { batch, streams: null };
+      }
+    })
+  );
+
+  // 取得に失敗したバッチを「オフライン」に混ぜてはいけない。
+  // 配信中かどうかが分からないだけなので unknown として分けて返す。
+  const live = results.flatMap((r) => r.streams || []);
+  const unknown = results.filter((r) => !r.streams).flatMap((r) => r.batch);
+  const unknownSet = new Set(unknown.map(String));
+  const liveIds = new Set(live.map((s) => String(s.user_id)));
+  const offline = ids.filter((id) => !liveIds.has(String(id)) && !unknownSet.has(String(id)));
+
+  return { live, offline, unknown, checked: ids.length };
+}
+
 // user_id[] → { user_id: profile_image_url }。100件ずつに割ってまとめて投げる。
 // バッチ同士に依存関係はないので直列に待つ理由がない。
 export async function fetchUserProfiles(token, userIds) {

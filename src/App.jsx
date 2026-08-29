@@ -9,6 +9,7 @@ import { useTheme } from './hooks/useTheme.js';
 import { useAuth } from './hooks/useAuth.js';
 import { useChannels, normalizeLogin } from './hooks/useChannels.js';
 import { useFeed } from './hooks/useFeed.js';
+import { useKnownChannels } from './hooks/useKnownChannels.js';
 import { useVisited } from './hooks/useVisited.js';
 import { useSettings } from './hooks/useSettings.js';
 import { useStreamSearch } from './hooks/useStreamSearch.js';
@@ -24,10 +25,11 @@ export default function App() {
   const { token, authError, authUrl } = useAuth();
   const channels = useChannels();
   const visited = useVisited();
+  const knownChannels = useKnownChannels();
   const [settings, updateSettings] = useSettings();
 
   const [demoMode, setDemoMode] = useState(DEMO_PARAM);
-  const { streams, setStreams, gameInfo, status, searching, searchDemo, searchReal } = useStreamSearch(
+  const { streams, setStreams, gameInfo, status, searching, searchDemo, searchReal, refreshKnown } = useStreamSearch(
     DEMO_PARAM ? sortStreams(MOCK_STREAMS, 'desc') : []
   );
   const [preview, setPreview] = useState(null);
@@ -62,6 +64,16 @@ export default function App() {
     if (demoMode) searchDemo(settings);
     else searchReal(token, settings, { favorites: channels.favorites });
   }, [demoMode, searchDemo, searchReal, token, settings, channels.favorites]);
+
+  // 検索が終わった時点の結果だけを覚える（逐次表示の途中では書き込まない）
+  useEffect(() => {
+    if (!demoMode && !searching) knownChannels.remember(streams);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searching, streams, demoMode]);
+
+  const handleRefreshKnown = useCallback(() => {
+    refreshKnown(token, settings, knownChannels.known);
+  }, [refreshKnown, token, settings, knownChannels.known]);
 
   const handleReset = useCallback(() => {
     if (!confirm('既視聴履歴をクリアしますか？\n(検索条件・お気に入り・除外リストは保持されます)')) return;
@@ -118,6 +130,8 @@ export default function App() {
             onZap={openDpgk}
             searching={searching}
             favoriteCount={channels.favorites.length}
+            knownCount={knownChannels.known.length}
+            onRefreshKnown={demoMode ? null : handleRefreshKnown}
           />
 
           <ChannelManagement channels={channels} nameCache={nameCache} />

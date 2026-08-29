@@ -12,7 +12,7 @@ const LANGUAGES = [
   ['', 'すべての言語'],
 ];
 
-export default function SearchFilters({ settings, onChange, onSearch, onReset, onChaos, onZap, searching, token, favoriteCount = 0 }) {
+export default function SearchFilters({ settings, onChange, onSearch, onReset, onChaos, onZap, searching, token, favoriteCount = 0, knownCount = 0, onRefreshKnown }) {
   const set = (key) => (e) => onChange({ [key]: e.target.value });
 
   return (
@@ -137,6 +137,16 @@ export default function SearchFilters({ settings, onChange, onSearch, onReset, o
         <button className="primary-button" onClick={onSearch} disabled={searching}>
           {searching ? '検索中…' : '指定条件で配信を検索'}
         </button>
+        {onRefreshKnown && (
+          <button
+            className="secondary-button"
+            onClick={onRefreshKnown}
+            disabled={searching || knownCount === 0}
+            title="過去の検索で見つかったチャンネルが、いま配信中かだけを確認します（カテゴリ全体は検索しません）"
+          >
+            覚えている{knownCount}人を確認
+          </button>
+        )}
         <button className="secondary-button" onClick={onReset} title="閲覧済み履歴のみクリアします">
           リセット
         </button>

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { getGameByName, fetchStreams, fetchUserProfiles, filterStreams, sortStreams } from '../api/twitch.js';
+import { getGameByName, fetchStreams, fetchLiveStreamsByUserIds, fetchUserProfiles, filterStreams, sortStreams } from '../api/twitch.js';
 import { MOCK_STREAMS } from '../mock/mockStreams.js';
 
 // 空欄・0・不正値は「打ち切らない」の意味にする
@@ -111,5 +111,55 @@ export function useStreamSearch(initialStreams = []) {
     }
   }, []);
 
-  return { streams, setStreams, gameInfo, setGameInfo, status, setStatus, searching, searchDemo, searchReal };
+  // 覚えているチャンネルだけを対象に、いま配信中かを確認する。
+  // カテゴリを頭からページングし直すのではなく user_id で直接引くので、
+  // 覚えている数が1000でも10リクエスト（並列なので実質1往復）で終わる。
+  // ただし前回以降に現れた新しい配信者は当然拾えない。全体検索の代わりにはならない。
+  const refreshKnown = useCallback(async (token, settings, knownChannels = []) => {
+    if (!token) {
+      setStatus('エラー: Twitch認証が完了していません。');
+      return;
+    }
+    const ids = knownChannels.map((c) => c.user_id).filter(Boolean);
+    if (ids.length === 0) {
+      setStatus('まだ覚えているチャンネルがありません。先に通常の検索を実行してください。');
+      return;
+    }
+
+    setSearching(true);
+    setStatus(`覚えている${ids.length}チャンネルの配信状況を確認中...`);
+    try {
+      const { live, offline, unknown, checked } = await fetchLiveStreamsByUserIds(token, ids);
+
+      // ゲーム指定があるときは取得後に突き合わせる。
+      // user_id と game_id を同時にクエリへ載せると結合規則に依存するため、こちらで確認する。
+      const gameId = settings.gameId ? String(settings.gameId) : '';
+      const scoped = gameId ? live.filter((s) => String(s.game_id) === gameId) : live;
+
+      let filtered = sortStreams(filterStreams(scoped, settings), settings.sortOrder);
+      setStreams(filtered);
+
+      if (filtered.length > 0) {
+        setStatus(`${checked}件中 ${live.length}件が配信中、条件に一致は${filtered.length}件。アイコンを取得中...`);
+        const userIds = [...new Set(filtered.map((s) => s.user_id))];
+        const profiles = await fetchUserProfiles(token, userIds);
+        filtered = filtered.map((s) => ({ ...s, profile_image_url: profiles[s.user_id] }));
+        setStreams(filtered);
+      }
+      const unknownNote = unknown.length > 0
+        ? ` ${unknown.length}件は取得に失敗したため状態不明です。`
+        : '';
+      setStatus(
+        `${checked}件を確認: ${live.length}件が配信中 / ${offline.length}件がオフライン。` +
+        `条件に一致したのは${filtered.length}件です。${unknownNote}`
+      );
+    } catch (err) {
+      console.error('配信状況の確認エラー:', err);
+      setStatus(`エラーが発生しました: ${err.message}`);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  return { streams, setStreams, gameInfo, setGameInfo, status, setStatus, searching, searchDemo, searchReal, refreshKnown };
 }
