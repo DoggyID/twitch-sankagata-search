@@ -8,6 +8,25 @@ function toPositiveInt(value) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+// カテゴリ（ゲーム）の解決。
+// settings.gameId が埋まるのはサジェストから選んだときだけで、名前を手で打つと
+// SearchFilters が gameId を空にクリアする。つまり「ゲーム名は入っているが ID は空」が
+// 通常の状態なので、その場合は名前から引き直す。
+// ここを省いて gameId の有無だけで分岐すると、呼び出し側が黙って
+// 「カテゴリ指定なし」に化ける（覚えているチャンネルの確認で他カテゴリの人まで出た原因）。
+//   none     … カテゴリ指定なし（ゲーム名が空）
+//   found    … 解決できた
+//   notFound … 名前は指定されたが Twitch 側に見つからない
+async function resolveGame(token, settings) {
+  const name = (settings.gameName || '').trim();
+  if (settings.gameId) {
+    return { kind: 'found', game: { id: String(settings.gameId), name, box_art_url: settings.gameBoxArtUrl } };
+  }
+  if (!name) return { kind: 'none' };
+  const game = await getGameByName(token, name);
+  return game ? { kind: 'found', game } : { kind: 'notFound', name };
+}
+
 // 検索の実行ロジック（本体の検索画面と DPGK ページで共有）。
 // streams / gameInfo / status / searching を管理し、デモ・実データ両対応。
 export function useStreamSearch(initialStreams = []) {
@@ -39,14 +58,13 @@ export function useStreamSearch(initialStreams = []) {
     let note = '';
     try {
       setGameInfo({ loading: `「${gameName}」のIDを検索中...` });
-      const game = settings.gameId
-        ? { id: settings.gameId, name: gameName, box_art_url: settings.gameBoxArtUrl }
-        : await getGameByName(token, gameName);
-      if (!game) {
+      const resolved = await resolveGame(token, settings);
+      if (resolved.kind !== 'found') {
         setGameInfo({ notFound: gameName });
         setStatus('指定されたゲーム名が見つからなかったため、配信を検索できません。');
         return;
       }
+      const game = resolved.game;
       setGameInfo({ ...game });
 
       // Twitch は viewer_count 降順で返す。
@@ -138,11 +156,18 @@ export function useStreamSearch(initialStreams = []) {
     setSearching(true);
     setStatus(`覚えている${ids.length}チャンネルの配信状況を確認中...`);
     try {
-      const { live, offline, unknown, checked } = await fetchLiveStreamsByUserIds(token, ids);
+      // 覚えているのは「過去のどれかの検索で見つかった人」全員なので、カテゴリを跨いでいる。
+      // 絞り込みは取得後にこちらでかける（user_id と game_id を同時にクエリへ載せると
+      // 結合規則に依存するため）。ID が手元に無ければ名前から引き直す。
+      // 解決できないまま素通しすると、他カテゴリで覚えた人まで結果に出てしまう。
+      const resolved = await resolveGame(token, settings);
+      if (resolved.kind === 'notFound') {
+        setStatus(`「${settings.gameName.trim()}」というカテゴリが見つからないため、絞り込めません。ゲーム名を確認してください。`);
+        return;
+      }
+      const gameId = resolved.kind === 'found' ? String(resolved.game.id) : '';
 
-      // ゲーム指定があるときは取得後に突き合わせる。
-      // user_id と game_id を同時にクエリへ載せると結合規則に依存するため、こちらで確認する。
-      const gameId = settings.gameId ? String(settings.gameId) : '';
+      const { live, offline, unknown, checked } = await fetchLiveStreamsByUserIds(token, ids);
       const scoped = gameId ? live.filter((s) => String(s.game_id) === gameId) : live;
 
       let filtered = sortStreams(dedupeStreams(filterStreams(scoped, settings)), settings.sortOrder);
@@ -158,9 +183,12 @@ export function useStreamSearch(initialStreams = []) {
       const unknownNote = unknown.length > 0
         ? ` ${unknown.length}件は取得に失敗したため状態不明です。`
         : '';
+      const scopeNote = gameId
+        ? `そのうち「${resolved.game.name}」は${scoped.length}件。`
+        : 'カテゴリの指定が無いため全カテゴリが対象です。';
       setStatus(
         `${checked}件を確認: ${live.length}件が配信中 / ${offline.length}件がオフライン。` +
-        `条件に一致したのは${filtered.length}件です。${unknownNote}`
+        `${scopeNote}条件に一致したのは${filtered.length}件です。${unknownNote}`
       );
     } catch (err) {
       console.error('配信状況の確認エラー:', err);
