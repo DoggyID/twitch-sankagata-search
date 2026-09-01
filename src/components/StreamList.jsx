@@ -41,7 +41,7 @@ export default function StreamList({ streams, emptyMsg, isVisited, previewLogin,
     <ul className="stream-list">
       {streams.map((stream) => (
         <StreamCard
-          key={stream.user_login}
+          key={stream.user_id || stream.user_login}
           stream={stream}
           visited={isVisited(stream.user_login)}
           previewing={previewLogin === stream.user_login}

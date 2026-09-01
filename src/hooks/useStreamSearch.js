@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { getGameByName, fetchStreams, fetchLiveStreamsByUserIds, fetchUserProfiles, filterStreams, sortStreams } from '../api/twitch.js';
+import { getGameByName, fetchStreams, fetchLiveStreamsByUserIds, fetchUserProfiles, filterStreams, sortStreams, dedupeStreams } from '../api/twitch.js';
 import { MOCK_STREAMS } from '../mock/mockStreams.js';
 
 // 空欄・0・不正値は「打ち切らない」の意味にする
@@ -17,7 +17,7 @@ export function useStreamSearch(initialStreams = []) {
   const [searching, setSearching] = useState(false);
 
   const searchDemo = useCallback((settings) => {
-    const filtered = sortStreams(filterStreams(MOCK_STREAMS, settings), settings.sortOrder);
+    const filtered = sortStreams(dedupeStreams(filterStreams(MOCK_STREAMS, settings)), settings.sortOrder);
     setStreams(filtered);
     setGameInfo({ name: settings.gameName || 'デモ', id: 'demo' });
     setStatus(`${filtered.length}件の配信が見つかりました。（デモモード）`);
@@ -70,14 +70,23 @@ export function useStreamSearch(initialStreams = []) {
       const matchesQuery = (s) => !useFavorites || !game.id || String(s.game_id) === String(game.id);
 
       // 1ページ取るたびに絞り込む。全件そろうのを待たずに一致分を積み上げていく。
-      const matches = [];
+      // ページ境界で同じ配信が二度返ることがあるため、配列ではなく user_id をキーにした
+      // Map に積む。ここで畳んでおかないと打ち切り判定（targetMatches）も水増しされる。
+      const matches = new Map();
+      const remember = (list) => {
+        list.forEach((s) => {
+          const key = s.user_id != null ? `id:${s.user_id}` : `login:${(s.user_login || '').toLowerCase()}`;
+          if (key === 'login:') return;
+          matches.set(key, s); // 新しく届いた方（視聴者数などが最新）で上書き
+        });
+      };
       setStatus(`ゲームID「${game.id}」で配信を検索中...`);
       const { fetched, capped, stoppedEarly } = await fetchStreams(token, query, {
         onPage: (page, total) => {
-          matches.push(...filterStreams(page.filter(matchesQuery), settings));
-          setStatus(`検索中... ${total}件を確認、${matches.length}件が条件に一致`);
-          setStreams(sortStreams(matches, settings.sortOrder));
-          return !(canStopEarly && targetMatches && matches.length >= targetMatches);
+          remember(filterStreams(page.filter(matchesQuery), settings));
+          setStatus(`検索中... ${total}件を確認、${matches.size}件が条件に一致`);
+          setStreams(sortStreams([...matches.values()], settings.sortOrder));
+          return !(canStopEarly && targetMatches && matches.size >= targetMatches);
         },
       });
 
@@ -87,7 +96,7 @@ export function useStreamSearch(initialStreams = []) {
         note = ' 取得上限（1000件）に達したため、これ以上のページ取得を打ち切りました。視聴者数の多い順に取得しているため、人気配信は含まれています。';
       }
 
-      let filtered = sortStreams(matches, settings.sortOrder);
+      let filtered = sortStreams([...matches.values()], settings.sortOrder);
       setStreams(filtered);
 
       if (filtered.length > 0) {
@@ -136,7 +145,7 @@ export function useStreamSearch(initialStreams = []) {
       const gameId = settings.gameId ? String(settings.gameId) : '';
       const scoped = gameId ? live.filter((s) => String(s.game_id) === gameId) : live;
 
-      let filtered = sortStreams(filterStreams(scoped, settings), settings.sortOrder);
+      let filtered = sortStreams(dedupeStreams(filterStreams(scoped, settings)), settings.sortOrder);
       setStreams(filtered);
 
       if (filtered.length > 0) {

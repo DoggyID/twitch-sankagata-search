@@ -153,6 +153,26 @@ export async function fetchUserProfiles(token, userIds) {
   return profiles;
 }
 
+// Helix の /streams は「視聴者数の降順に並んだ、刻々と動く集合」の上をカーソルで辿る。
+// ページを跨いでいる間に視聴者数が変われば、境界にいた配信は次のページにもう一度現れる
+// （逆に一度も現れないこともある）。積み上げる側で畳まないと同じ配信者のカードが複数枚でき、
+// さらに React の key が衝突して以降の更新でDOMが壊れる。
+// login は本人が変更できるので、畳むキーは不変の user_id を使う。
+export function dedupeStreams(streams) {
+  const byKey = new Map();
+  (streams || []).forEach((s) => {
+    if (!s) return;
+    const key = s.user_id != null ? `id:${s.user_id}` : `login:${normalizeLoginKey(s.user_login)}`;
+    if (key === 'login:') return;
+    byKey.set(key, s); // 後から届いた方が新しいので上書きする
+  });
+  return [...byKey.values()];
+}
+
+function normalizeLoginKey(login) {
+  return (login || '').trim().toLowerCase();
+}
+
 // クライアント側フィルタ（タイトル/タグ/除外タグ/最大視聴者数）
 export function filterStreams(streams, settings) {
   const titleQuery = (settings.titleQuery || '').trim().toLowerCase();
